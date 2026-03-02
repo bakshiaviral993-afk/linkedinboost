@@ -117,22 +117,33 @@ async function startServer() {
 
       res.send(`
         <html>
-          <body>
-            <script>
-              if (window.opener) {
-                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', userId: '${userId}' }, '*');
-                window.close();
-              } else {
-                window.location.href = '/';
-              }
-            </script>
-            <p>Authentication successful. You can close this window.</p>
+          <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8fafc;">
+            <div style="text-align: center; padding: 2rem; background: white; border-radius: 1rem; shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+              <h2 style="color: #4f46e5; margin-bottom: 0.5rem;">Connection Successful!</h2>
+              <p style="color: #64748b;">This window will close automatically.</p>
+              <script>
+                if (window.opener) {
+                  window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', userId: '${userId}' }, '*');
+                  setTimeout(() => window.close(), 1000);
+                } else {
+                  document.querySelector('p').innerText = "Authentication complete. You can now close this tab and return to the app.";
+                }
+              </script>
+            </div>
           </body>
         </html>
       `);
     } catch (error: any) {
       console.error("OAuth Error:", error);
-      res.status(500).send(`Authentication failed: ${error.message}`);
+      res.status(500).send(`
+        <html>
+          <body style="font-family: sans-serif; padding: 2rem;">
+            <h2 style="color: #ef4444;">Authentication Failed</h2>
+            <p>${error.message}</p>
+            <button onclick="window.close()">Close Window</button>
+          </body>
+        </html>
+      `);
     }
   });
 
