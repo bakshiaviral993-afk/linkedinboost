@@ -1,1 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", sans-serif;
+  --font-mono: "DM Mono", monospace;
+
+  --color-bg: #030712;
+  --color-surface: #0d1117;
+  --color-surface2: #161b22;
+  --color-border: #21262d;
+  --color-accent: #22d3ee;
+  --color-accent2: #a78bfa;
+  --color-gold: #fbbf24;
+  --color-success: #34d399;
+  --color-danger: #f87171;
+  --color-text: #e6edf3;
+  --color-muted: #7d8590;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-text font-sans antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface border border-border rounded-xl p-6 transition-all duration-300 hover:border-accent/30;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-accent to-accent2 text-bg font-display font-bold py-3 px-6 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-accent/20 flex items-center justify-center gap-2;
+  }
+
+  .btn-secondary {
+    @apply bg-surface2 border border-border text-text font-medium py-3 px-6 rounded-xl transition-all duration-300 hover:bg-surface hover:border-accent/30 flex items-center justify-center gap-2;
+  }
+
+  .input {
+    @apply bg-surface2 border border-border text-text rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all;
+  }
+
+  .tag {
+    @apply px-2 py-1 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider;
+  }
+
+  .tag-cyan { @apply bg-accent/10 text-accent border border-accent/20; }
+  .tag-purple { @apply bg-accent2/10 text-accent2 border border-accent2/20; }
+  .tag-gold { @apply bg-gold/10 text-gold border border-gold/20; }
+  .tag-green { @apply bg-success/10 text-success border border-success/20; }
+  .tag-red { @apply bg-danger/10 text-danger border border-danger/20; }
+
+  .progress-bar {
+    @apply h-2 w-full bg-surface2 rounded-full overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full bg-accent transition-all duration-1000 ease-out;
+  }
+
+  .loader {
+    @apply w-5 h-5 border-2 border-accent/30 border-t-accent rounded-full animate-spin;
+  }
+
+  .stagger-1 { animation-delay: 100ms; }
+  .stagger-2 { animation-delay: 200ms; }
+  .stagger-3 { animation-delay: 300ms; }
+  .stagger-4 { animation-delay: 400ms; }
+  .stagger-5 { animation-delay: 500ms; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-bg;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full hover:bg-muted/30 transition-all;
+}
