@@ -4,6 +4,7 @@ import Database from "better-sqlite3";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 import { GoogleGenAI } from "@google/genai";
+import { supabase } from "./server/supabase";
 
 dotenv.config();
 
@@ -364,6 +365,27 @@ async function startServer() {
       const profileData: any = await profileResponse.json();
 
       const userId = profileData.sub;
+      
+      if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+          const { error: sbError } = await supabase
+            .from("users")
+            .upsert({
+              id: userId,
+              linkedin_id: userId,
+              name: profileData.name,
+              email: profileData.email,
+              picture: profileData.picture,
+              access_token: tokenData.access_token,
+              expires_at: Date.now() + (tokenData.expires_in || 3600) * 1000
+            });
+          if (sbError) console.error("Supabase user save error:", sbError);
+          else console.log("Supabase user save successful");
+        } catch (sbErr) {
+          console.error("Supabase user save network exception:", sbErr);
+        }
+      }
+
       db.prepare(`
         INSERT INTO users (id, linkedin_id, name, email, picture, access_token, expires_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -432,13 +454,48 @@ async function startServer() {
     }
   });
 
-  app.get("/api/user/:id", (req, res) => {
+  app.get("/api/user/:id", async (req, res) => {
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const { data, error } = await supabase
+          .from("users")
+          .select("id, name, email, picture, headline, about")
+          .eq("id", req.params.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (data) {
+          return res.json(data);
+        }
+      } catch (err: any) {
+        console.error("Supabase Get User Error, falling back to SQLite:", err);
+      }
+    }
     const user = db.prepare("SELECT id, name, email, picture, headline, about FROM users WHERE id = ?").get(req.params.id);
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
   });
 
-  app.get("/api/analysis/:userId", (req, res) => {
+  app.get("/api/analysis/:userId", async (req, res) => {
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const { data, error } = await supabase
+          .from("profile_analyses")
+          .select("analysis_json")
+          .eq("user_id", req.params.userId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (data) {
+          const result = typeof data.analysis_json === "string" ? JSON.parse(data.analysis_json) : data.analysis_json;
+          return res.json(result);
+        }
+      } catch (err: any) {
+        console.error("Supabase Get Analysis Error, falling back to SQLite:", err);
+      }
+    }
     try {
       const row = db.prepare("SELECT analysis_json FROM profile_analyses WHERE user_id = ? ORDER BY created_at DESC LIMIT 1").get(req.params.userId) as { analysis_json: string } | undefined;
       if (!row) return res.status(404).json({ error: "No analysis found" });
@@ -448,27 +505,83 @@ async function startServer() {
     }
   });
 
-  app.get("/api/user/:id/posts", (req, res) => {
+  app.get("/api/user/:id/posts", async (req, res) => {
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const { data, error } = await supabase
+          .from("posts")
+          .select("*")
+          .eq("user_id", req.params.id)
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        if (error) throw error;
+        if (data) {
+          return res.json(data);
+        }
+      } catch (err: any) {
+        console.error("Supabase Get Posts Error, falling back to SQLite:", err);
+      }
+    }
     const posts = db.prepare("SELECT * FROM posts WHERE user_id = ? ORDER BY created_at DESC LIMIT 50").all(req.params.id);
     res.json(posts);
   });
 
-  app.post("/api/save-analysis", (req, res) => {
+  app.post("/api/save-analysis", async (req, res) => {
     const { userId, analysis } = req.body;
+    let savedToSupabase = false;
+
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const { error } = await supabase
+          .from("profile_analyses")
+          .insert({
+            user_id: userId,
+            analysis_json: analysis,
+            score: analysis?.overallScore || null
+          });
+        if (error) throw error;
+        savedToSupabase = true;
+      } catch (err: any) {
+        console.error("Supabase Save Analysis Error:", err);
+      }
+    }
+
     try {
       db.prepare("INSERT INTO profile_analyses (user_id, analysis_json, score) VALUES (?, ?, ?)").run(
         userId,
         JSON.stringify(analysis),
         analysis.overallScore
       );
-      res.json({ success: true });
+      res.json({ success: true, savedToSupabase });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/save-post", (req, res) => {
+  app.post("/api/save-post", async (req, res) => {
     const { userId, postData, topic, postType } = req.body;
+    let savedToSupabase = false;
+
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const { error } = await supabase
+          .from("posts")
+          .insert({
+            user_id: userId,
+            content: postData.post,
+            status: "draft",
+            virality_score: postData.viralityScore,
+            topic,
+            post_type: postType
+          });
+        if (error) throw error;
+        savedToSupabase = true;
+      } catch (err: any) {
+        console.error("Supabase Save Post Error:", err);
+      }
+    }
+
     try {
       db.prepare("INSERT INTO posts (user_id, content, status, virality_score, topic, post_type) VALUES (?, ?, 'draft', ?, ?, ?)").run(
         userId,
@@ -477,7 +590,7 @@ async function startServer() {
         topic,
         postType
       );
-      res.json({ success: true });
+      res.json({ success: true, savedToSupabase });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -519,14 +632,38 @@ async function startServer() {
 
   app.post("/api/post", async (req, res) => {
     const { userId, content } = req.body;
-    const user: any = db.prepare("SELECT access_token FROM users WHERE id = ?").get(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    let access_token: string | null = null;
+
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const { data, error } = await supabase
+          .from("users")
+          .select("access_token")
+          .eq("id", userId)
+          .maybeSingle();
+        if (error) throw error;
+        if (data) {
+          access_token = data.access_token;
+        }
+      } catch (err: any) {
+        console.error("Supabase Get User Token Error:", err);
+      }
+    }
+
+    if (!access_token) {
+      const user: any = db.prepare("SELECT access_token FROM users WHERE id = ?").get(userId);
+      if (user) {
+        access_token = user.access_token;
+      }
+    }
+
+    if (!access_token) return res.status(404).json({ error: "User or access token not found" });
 
     try {
       const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${user.access_token}`,
+          Authorization: `Bearer ${access_token}`,
           "X-Restli-Protocol-Version": "2.0.0",
           "Content-Type": "application/json",
         },
@@ -545,6 +682,19 @@ async function startServer() {
 
       const result: any = await response.json();
       if (result.id) {
+        if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+          try {
+            const { error } = await supabase
+              .from("posts")
+              .update({ status: 'published', linkedin_post_id: result.id })
+              .eq("user_id", userId)
+              .eq("content", content);
+            if (error) throw error;
+          } catch (err: any) {
+            console.error("Supabase Update Post Status Error:", err);
+          }
+        }
+
         db.prepare("UPDATE posts SET status = 'published', linkedin_post_id = ? WHERE user_id = ? AND content = ?").run(
           result.id,
           userId,

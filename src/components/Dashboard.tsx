@@ -167,7 +167,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <div className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full border-2 border-bg" />
             </button>
             <div className="h-8 w-[1px] bg-border mx-2" />
-            <button className="btn-primary py-2 px-4 text-sm h-10">
+            <button 
+              onClick={() => setActiveView('generator')}
+              className="btn-primary py-2 px-4 text-sm h-10"
+            >
               <Plus className="w-4 h-4" />
               New Post
             </button>
