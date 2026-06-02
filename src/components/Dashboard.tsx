@@ -13,7 +13,6 @@ import {
   Bell,
   Search,
   Plus,
-  ShieldAlert,
   BarChart3,
   RefreshCw
 } from "lucide-react";
@@ -26,10 +25,9 @@ import ContentStrategy from "./ContentStrategy";
 import PostHistory from "./PostHistory";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import PostRewriter from "./PostRewriter";
-import DebugAI from "./DebugAI";
 
 type User = { id: string; name: string; email: string; picture?: string; headline?: string; about?: string };
-type View = 'dashboard' | 'analyzer' | 'generator' | 'optimizer' | 'strategy' | 'history' | 'analytics' | 'rewriter' | 'settings' | 'debug';
+type View = 'dashboard' | 'analyzer' | 'generator' | 'optimizer' | 'strategy' | 'history' | 'analytics' | 'rewriter' | 'settings';
 
 interface DashboardProps {
   user: User;
@@ -57,7 +55,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     { id: 'optimizer', icon: Zap, label: 'Profile Optimizer' },
     { id: 'strategy', icon: FileText, label: 'Content Strategy' },
     { id: 'history', icon: History, label: 'Post History' },
-    { id: 'debug', icon: ShieldAlert, label: 'AI Diagnostics' },
   ];
 
   const renderView = () => {
@@ -70,7 +67,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       case 'optimizer': return <ProfileOptimizer user={user} />;
       case 'strategy': return <ContentStrategy user={user} />;
       case 'history': return <PostHistory user={user} />;
-      case 'debug': return <DebugAI />;
       case 'settings': return <div className="p-8"><h2 className="text-3xl font-display font-bold mb-8">Settings</h2><div className="card">Account settings coming soon.</div></div>;
       default: return <DashboardHome user={user} onNavigate={setActiveView} />;
     }

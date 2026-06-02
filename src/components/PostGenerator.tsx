@@ -302,12 +302,9 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
               </div>
               <p className="text-xs opacity-80 whitespace-pre-wrap">{error}</p>
               {error.includes("AI models failed") && (
-                <button 
-                  onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'debug' }))}
-                  className="text-xs font-bold underline hover:text-danger/80 text-left"
-                >
-                  Go to AI Diagnostics to fix API keys →
-                </button>
+                <span className="text-xs text-muted">
+                  Tip: Toggle <strong>Demo Mode</strong> above to continue testing without valid API keys.
+                </span>
               )}
             </div>
           )}

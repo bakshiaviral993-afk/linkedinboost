@@ -19,6 +19,12 @@ export interface ProfileAnalysis {
   competitorGap: string;
   viralityPotential: string;
   targetAudienceReach: string;
+  roadmap30Days: {
+    week: string;
+    focus: string;
+    actionItems: string[];
+    contentIdeas: string[];
+  }[];
 }
 
 export interface PostGeneration {
@@ -73,7 +79,33 @@ export async function analyzeProfile(profileData: any): Promise<ProfileAnalysis>
     "profilePowerStatement": "One powerful sentence about unique value",
     "competitorGap": "What top performers in this space have that this profile lacks",
     "viralityPotential": "high",
-    "targetAudienceReach": "description"
+    "targetAudienceReach": "description",
+    "roadmap30Days": [
+      {
+        "week": "Week 1: Headline & Core Hook",
+        "focus": "Strengthening headline messaging and profile SEO",
+        "actionItems": ["Rewrite headline using the optimized AI version", "Detail standard FinTech or BFSI metrics in experience"],
+        "contentIdeas": ["A post on FinTech/industry digital transformation benchmarks", "A personal career lesson story"]
+      },
+      {
+        "week": "Week 2: Storytelling & Authority",
+        "focus": "...",
+        "actionItems": ["...", "..."],
+        "contentIdeas": ["...", "..."]
+      },
+      {
+        "week": "Week 3: Engagement & Networking Integration",
+        "focus": "...",
+        "actionItems": ["...", "..."],
+        "contentIdeas": ["...", "..."]
+      },
+      {
+        "week": "Week 4: Scaling Lead Generation",
+        "focus": "...",
+        "actionItems": ["...", "..."],
+        "contentIdeas": ["...", "..."]
+      }
+    ]
   }`;
 
   const response = await ai.models.generateContent({

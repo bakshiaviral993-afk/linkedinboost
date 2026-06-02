@@ -438,6 +438,16 @@ async function startServer() {
     res.json(user);
   });
 
+  app.get("/api/analysis/:userId", (req, res) => {
+    try {
+      const row = db.prepare("SELECT analysis_json FROM profile_analyses WHERE user_id = ? ORDER BY created_at DESC LIMIT 1").get(req.params.userId) as { analysis_json: string } | undefined;
+      if (!row) return res.status(404).json({ error: "No analysis found" });
+      res.json(JSON.parse(row.analysis_json));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/user/:id/posts", (req, res) => {
     const posts = db.prepare("SELECT * FROM posts WHERE user_id = ? ORDER BY created_at DESC LIMIT 50").all(req.params.id);
     res.json(posts);
