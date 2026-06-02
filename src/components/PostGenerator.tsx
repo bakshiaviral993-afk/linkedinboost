@@ -13,6 +13,10 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isScoring, setIsScoring] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [showScheduler, setShowScheduler] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
   const [result, setResult] = useState<PostGeneration | null>(null);
   const [scoreResult, setScoreResult] = useState<PostScore | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +42,14 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
     { id: 'howto', label: 'How-To Guide' }
   ];
 
-  const tones = ['Authoritative', 'Conversational', 'Vulnerable', 'Bold', 'Humorous', 'Inspiring'];
+  const tones = [
+    { id: 'thought-leader', label: 'Thought Leader' },
+    { id: 'storyteller', label: 'Storyteller' },
+    { id: 'data-driven', label: 'Data-Driven' },
+    { id: 'conversational', label: 'Conversational' },
+    { id: 'bold', label: 'Bold' },
+    { id: 'inspiring', label: 'Inspiring' }
+  ];
 
   const handleGenerate = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -130,6 +141,40 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
     }
   };
 
+  const handleSchedule = async () => {
+    if (!scheduledDate || !scheduledTime) {
+      setError("Please select both date and time for scheduling.");
+      return;
+    }
+    setIsScheduling(true);
+    try {
+      const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`).getTime();
+      const res = await fetch("/api/save-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          userId: user.id, 
+          postData: { ...result, post: editablePost }, 
+          topic: formData.topic, 
+          postType: formData.postType,
+          status: 'scheduled',
+          scheduledAt
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPublishSuccess(true);
+        setShowScheduler(false);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err: any) {
+      setError("Scheduling failed: " + err.message);
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
   const handleCopy = () => {
     navigator.clipboard.writeText(editablePost);
   };
@@ -186,12 +231,12 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
               <div className="flex flex-wrap gap-2">
                 {tones.map(tone => (
                   <button
-                    key={tone}
+                    key={tone.id}
                     type="button"
-                    onClick={() => setFormData({...formData, tone: tone.toLowerCase()})}
-                    className={`px-3 py-1.5 rounded-full border text-[10px] font-bold uppercase tracking-wider transition-all ${formData.tone === tone.toLowerCase() ? 'bg-accent/10 border-accent text-accent' : 'bg-surface2 border-border text-muted hover:border-muted'}`}
+                    onClick={() => setFormData({...formData, tone: tone.id})}
+                    className={`px-3 py-1.5 rounded-full border text-[10px] font-bold uppercase tracking-wider transition-all ${formData.tone === tone.id ? 'bg-accent/10 border-accent text-accent' : 'bg-surface2 border-border text-muted hover:border-muted'}`}
                   >
-                    {tone}
+                    {tone.label}
                   </button>
                 ))}
               </div>
@@ -387,26 +432,81 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
                       {isScoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
                       Score Post
                     </button>
-                    <button 
-                      onClick={handlePublish}
-                      disabled={isPublishing || publishSuccess}
-                      className={`btn-primary flex-1 ${publishSuccess ? 'bg-success/20 text-success border-success/30' : ''}`}
-                    >
-                      {isPublishing ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : publishSuccess ? (
-                        <>
-                          <CheckCircle2 className="w-4 h-4" />
-                          Posted to LinkedIn!
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          Publish to LinkedIn
-                        </>
-                      )}
-                    </button>
+                    <div className="flex-1 flex gap-2">
+                      <button 
+                        onClick={() => setShowScheduler(!showScheduler)}
+                        className="btn-secondary p-3"
+                        title="Schedule Post"
+                      >
+                        <Clock className="w-5 h-5" />
+                      </button>
+                      <button 
+                        onClick={handlePublish}
+                        disabled={isPublishing || publishSuccess}
+                        className={`btn-primary flex-1 ${publishSuccess ? 'bg-success/20 text-success border-success/30' : ''}`}
+                      >
+                        {isPublishing ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : publishSuccess ? (
+                          <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            Done!
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4" />
+                            Publish Now
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Scheduler Popover */}
+                  <AnimatePresence>
+                    {showScheduler && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="p-6 bg-surface2 border border-border rounded-xl space-y-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-bold text-sm">Schedule Post</h4>
+                          <button onClick={() => setShowScheduler(false)} className="text-muted hover:text-text">
+                            <ChevronRight className="w-4 h-4 rotate-90" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-muted uppercase">Date</label>
+                            <input 
+                              type="date" 
+                              value={scheduledDate}
+                              onChange={e => setScheduledDate(e.target.value)}
+                              className="input w-full py-2 text-sm" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-muted uppercase">Time</label>
+                            <input 
+                              type="time" 
+                              value={scheduledTime}
+                              onChange={e => setScheduledTime(e.target.value)}
+                              className="input w-full py-2 text-sm" 
+                            />
+                          </div>
+                        </div>
+                        <button 
+                          onClick={handleSchedule}
+                          disabled={isScheduling || !scheduledDate || !scheduledTime}
+                          className="btn-primary w-full py-3 text-sm"
+                        >
+                          {isScheduling ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Schedule"}
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Scoring Results */}

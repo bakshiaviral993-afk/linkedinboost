@@ -16,8 +16,30 @@ export default function Landing({ onAuthSuccess }: LandingProps) {
         onAuthSuccess(event.data.userId);
       }
     };
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === "lb_user_id" && event.newValue) {
+        onAuthSuccess(event.newValue);
+      }
+    };
+
+    // Fail-safe interval polling of localStorage
+    const intervalId = setInterval(() => {
+      const savedUserId = localStorage.getItem("lb_user_id");
+      if (savedUserId) {
+        clearInterval(intervalId);
+        onAuthSuccess(savedUserId);
+      }
+    }, 1000);
+
     window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(intervalId);
+    };
   }, [onAuthSuccess]);
 
   const handleConnect = async () => {
@@ -55,7 +77,7 @@ export default function Landing({ onAuthSuccess }: LandingProps) {
           <div className="w-10 h-10 bg-gradient-to-br from-accent to-accent2 rounded-xl flex items-center justify-center shadow-lg shadow-accent/20">
             <Zap className="text-bg w-6 h-6 fill-current" />
           </div>
-          <span className="font-display text-2xl font-extrabold tracking-tight">LinkBoost <span className="text-accent">AI</span></span>
+          <span className="font-display text-2xl font-extrabold tracking-tight">Narratiq <span className="text-accent">AI</span></span>
         </div>
         <div className="flex items-center gap-4">
           <span className="tag tag-cyan">v2.5 Production</span>
@@ -91,7 +113,7 @@ export default function Landing({ onAuthSuccess }: LandingProps) {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-xl text-muted max-w-2xl mb-12 leading-relaxed"
         >
-          LinkBoost AI uses elite growth strategies and Gemini 2.5 Intelligence to optimize your profile, generate viral content, and automate your LinkedIn success.
+          Narratiq uses elite growth strategies and Gemini 2.5 Intelligence to optimize your profile, generate viral content, and automate your LinkedIn success.
         </motion.p>
 
         <motion.div 
@@ -154,14 +176,43 @@ export default function Landing({ onAuthSuccess }: LandingProps) {
             </motion.div>
           ))}
         </div>
+
+        {/* About the Creator */}
+        <motion.section 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-40 w-full max-w-4xl mx-auto"
+        >
+          <div className="card p-12 border-accent/20 bg-accent/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              <Zap className="w-32 h-32 text-accent" />
+            </div>
+            <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
+              <div className="w-32 h-32 rounded-full border-4 border-accent/30 p-1 flex-shrink-0">
+                <div className="w-full h-full rounded-full bg-surface2 flex items-center justify-center text-3xl font-bold text-accent">AB</div>
+              </div>
+              <div className="text-left">
+                <h2 className="text-3xl font-display font-bold mb-4">Built by Aviral Bakshi</h2>
+                <p className="text-lg text-muted leading-relaxed mb-6">
+                  AI consultant and BFSI specialist with 12+ years in finance. This tool was born from the frustration of watching great professionals stay invisible on LinkedIn.
+                </p>
+                <div className="flex gap-4">
+                  <a href="https://aviral.in" target="_blank" rel="noopener noreferrer" className="btn-secondary py-2 px-6 text-sm">Visit aviral.in</a>
+                  <a href="https://linkedin.com/in/aviralbakshi" target="_blank" rel="noopener noreferrer" className="btn-primary py-2 px-6 text-sm">Connect on LinkedIn</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.section>
       </main>
 
-      <footer className="relative z-10 container mx-auto px-6 py-12 border-t border-border mt-20 flex flex-col md:row justify-between items-center gap-6">
-        <div className="text-muted text-sm">© 2026 LinkBoost AI. Built for elite professionals.</div>
+      <footer className="relative z-10 container mx-auto px-6 py-12 border-t border-border mt-20 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="text-muted text-sm">© 2026 Narratiq · Built by <span className="text-text font-bold">Aviral Bakshi</span> · <a href="https://aviral.in" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">aviral.in</a></div>
         <div className="flex gap-8 text-muted text-sm">
-          <a href="#" className="hover:text-accent transition-colors">Privacy</a>
-          <a href="#" className="hover:text-accent transition-colors">Terms</a>
-          <a href="#" className="hover:text-accent transition-colors">API Docs</a>
+          <a href="#" className="hover:text-accent transition-colors">Privacy Policy</a>
+          <a href="#" className="hover:text-accent transition-colors">Terms of Service</a>
+          <a href="#" className="hover:text-accent transition-colors">Support</a>
         </div>
       </footer>
     </div>

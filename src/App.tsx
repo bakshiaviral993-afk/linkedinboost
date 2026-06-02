@@ -48,7 +48,7 @@ export default function App() {
       <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-accent/20 border-t-accent rounded-full animate-spin" />
-          <span className="font-display text-xl font-bold text-muted animate-pulse">LinkBoost AI</span>
+          <span className="font-display text-xl font-bold text-muted animate-pulse">Narratiq</span>
         </div>
       </div>
     );

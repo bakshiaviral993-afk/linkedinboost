@@ -1,9 +1,9 @@
 import React from "react";
-import { Sparkles, TrendingUp, Zap, FileText, ArrowRight, Lightbulb, Target, Users, BarChart3 } from "lucide-react";
+import { Sparkles, TrendingUp, Zap, FileText, ArrowRight, Lightbulb, Target, Users, BarChart3, RefreshCw } from "lucide-react";
 import { motion } from "motion/react";
 
 type User = { id: string; name: string; email: string; picture?: string; headline?: string; about?: string };
-type View = 'dashboard' | 'analyzer' | 'generator' | 'optimizer' | 'strategy' | 'history' | 'settings';
+type View = 'dashboard' | 'analyzer' | 'generator' | 'optimizer' | 'strategy' | 'history' | 'analytics' | 'rewriter' | 'settings';
 
 interface DashboardHomeProps {
   user: User;
@@ -16,10 +16,10 @@ export default function DashboardHome({ user, onNavigate }: DashboardHomeProps) 
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   const quickActions = [
-    { id: 'analyzer', icon: Sparkles, title: "Analyze Profile", desc: "Get your LinkedIn score", color: "text-accent", bg: "bg-accent/10" },
+    { id: 'analytics', icon: BarChart3, title: "View Analytics", desc: "Track your growth", color: "text-accent", bg: "bg-accent/10" },
     { id: 'generator', icon: TrendingUp, title: "Generate Post", desc: "Create viral content", color: "text-accent2", bg: "bg-accent2/10" },
-    { id: 'optimizer', icon: Zap, title: "Optimize Section", desc: "Rewrite for SEO", color: "text-gold", bg: "bg-gold/10" },
-    { id: 'strategy', icon: FileText, title: "Build Strategy", desc: "Plan 30 days of growth", color: "text-success", bg: "bg-success/10" },
+    { id: 'rewriter', icon: RefreshCw, title: "Rewrite Post", desc: "Optimize existing content", color: "text-gold", bg: "bg-gold/10" },
+    { id: 'analyzer', icon: Sparkles, title: "Analyze Profile", desc: "Get your LinkedIn score", color: "text-success", bg: "bg-success/10" },
   ];
 
   const stats = [

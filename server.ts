@@ -389,12 +389,30 @@ async function startServer() {
               <h2 style="color: #22d3ee; margin-bottom: 0.5rem;">Connection Successful!</h2>
               <p style="color: #7d8590;">This window will close automatically.</p>
               <script>
-                if (window.opener) {
-                  window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', userId: '${userId}' }, '*');
-                  setTimeout(() => window.close(), 1000);
-                } else {
-                  document.querySelector('p').innerText = "Authentication complete. You can now close this tab and return to the app.";
+                // Save user ID to localStorage so parent window can detect it
+                try {
+                  localStorage.setItem('lb_user_id', '${userId}');
+                } catch (e) {
+                  console.error('Failed to set localStorage', e);
                 }
+
+                // Try to notify the opener window
+                if (window.opener) {
+                  try {
+                    window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', userId: '${userId}' }, '*');
+                  } catch (e) {
+                    console.error('Failed to postMessage', e);
+                  }
+                }
+
+                // Always auto-close after a short timeout
+                setTimeout(() => {
+                  try {
+                    window.close();
+                  } catch (e) {
+                    console.error('Failed to auto-close window', e);
+                  }
+                }, 1000);
               </script>
             </div>
           </body>

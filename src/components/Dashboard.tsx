@@ -13,7 +13,9 @@ import {
   Bell,
   Search,
   Plus,
-  ShieldAlert
+  ShieldAlert,
+  BarChart3,
+  RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import DashboardHome from "./DashboardHome";
@@ -22,10 +24,12 @@ import PostGenerator from "./PostGenerator";
 import ProfileOptimizer from "./ProfileOptimizer";
 import ContentStrategy from "./ContentStrategy";
 import PostHistory from "./PostHistory";
+import AnalyticsDashboard from "./AnalyticsDashboard";
+import PostRewriter from "./PostRewriter";
 import DebugAI from "./DebugAI";
 
 type User = { id: string; name: string; email: string; picture?: string; headline?: string; about?: string };
-type View = 'dashboard' | 'analyzer' | 'generator' | 'optimizer' | 'strategy' | 'history' | 'settings' | 'debug';
+type View = 'dashboard' | 'analyzer' | 'generator' | 'optimizer' | 'strategy' | 'history' | 'analytics' | 'rewriter' | 'settings' | 'debug';
 
 interface DashboardProps {
   user: User;
@@ -46,8 +50,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Overview' },
+    { id: 'analytics', icon: BarChart3, label: 'Analytics' },
     { id: 'analyzer', icon: Sparkles, label: 'Profile Analyzer' },
     { id: 'generator', icon: TrendingUp, label: 'Post Generator' },
+    { id: 'rewriter', icon: RefreshCw, label: 'Post Rewriter' },
     { id: 'optimizer', icon: Zap, label: 'Profile Optimizer' },
     { id: 'strategy', icon: FileText, label: 'Content Strategy' },
     { id: 'history', icon: History, label: 'Post History' },
@@ -57,8 +63,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const renderView = () => {
     switch (activeView) {
       case 'dashboard': return <DashboardHome user={user} onNavigate={setActiveView} />;
+      case 'analytics': return <AnalyticsDashboard user={user} />;
       case 'analyzer': return <ProfileAnalyzer user={user} />;
       case 'generator': return <PostGenerator user={user} />;
+      case 'rewriter': return <PostRewriter user={user} />;
       case 'optimizer': return <ProfileOptimizer user={user} />;
       case 'strategy': return <ContentStrategy user={user} />;
       case 'history': return <PostHistory user={user} />;
@@ -78,7 +86,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <div className="w-8 h-8 bg-gradient-to-br from-accent to-accent2 rounded-lg flex items-center justify-center">
                 <Zap className="text-bg w-5 h-5 fill-current" />
               </div>
-              <span className="font-display text-xl font-extrabold tracking-tight">LinkBoost</span>
+              <span className="font-display text-xl font-extrabold tracking-tight">Narratiq</span>
             </div>
           )}
           <button 
@@ -185,6 +193,18 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             </motion.div>
           </AnimatePresence>
         </div>
+
+        {/* Footer Branding */}
+        <footer className="px-8 py-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 bg-surface/50">
+          <div className="text-xs text-muted">
+            © 2026 Narratiq · Built by <span className="text-text font-bold">Aviral Bakshi</span> · <a href="https://aviral.in" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">aviral.in</a>
+          </div>
+          <div className="flex gap-6 text-[10px] font-bold text-muted uppercase tracking-widest">
+            <a href="#" className="hover:text-accent transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-accent transition-colors">Terms of Service</a>
+            <a href="#" className="hover:text-accent transition-colors">Support</a>
+          </div>
+        </footer>
       </main>
     </div>
   );
