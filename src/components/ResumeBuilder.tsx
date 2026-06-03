@@ -15,7 +15,8 @@ import {
   Award,
   BookOpen,
   Printer,
-  ChevronRight
+  ChevronRight,
+  Zap
 } from "lucide-react";
 import { generateResume, generateCoverLetter, type ResumeData, type CoverLetterData } from "../services/gemini";
 
@@ -23,7 +24,7 @@ interface ResumeBuilderProps {
   user: { id: string; name: string; email: string };
 }
 
-type Mode = "editor" | "letter";
+type Mode = "editor" | "letter" | "ats" | "jd_match";
 
 export default function ResumeBuilder({ user }: ResumeBuilderProps) {
   const [loading, setLoading] = useState(false);
@@ -49,6 +50,92 @@ export default function ResumeBuilder({ user }: ResumeBuilderProps) {
 
   const [copiedResume, setCopiedResume] = useState(false);
   const [copiedLetter, setCopiedLetter] = useState(false);
+
+  // ATS Scan & Hist states
+  const [atsLoading, setAtsLoading] = useState(false);
+  const [atsResult, setAtsResult] = useState<{
+    atsScore: number;
+    readability: number;
+    keywordDensity: number;
+    achievementImpact: number;
+    skillCoverage: number;
+    missingKeywords: string[];
+    weakAreas: string[];
+    recommendations: string[];
+  } | null>(null);
+  const [atsHistory, setAtsHistory] = useState<any[]>([]);
+
+  // JD Match state
+  const [jdLoading, setJdLoading] = useState(false);
+  const [targetJd, setTargetJd] = useState("");
+  const [jdResult, setJdResult] = useState<{
+    matchScore: number;
+    missingKeywords: string[];
+    missingSkills: string[];
+    recommendedChanges: string[];
+    tailoredResume: string;
+    tailoredLinkedIn: string;
+    tailoredCoverLetter: string;
+  } | null>(null);
+
+  // History loader
+  const fetchAtsHistory = async () => {
+    try {
+      const res = await fetch(`/api/ats-resume-scan/${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAtsHistory(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch ATS History:", err);
+    }
+  };
+
+  const triggerAtsScan = async () => {
+    if (atsLoading) return;
+    setAtsLoading(true);
+    try {
+      const resumeContent = resume ? JSON.stringify(resume) : pastedText;
+      const res = await fetch("/api/ats-resume-scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, resumeText: resumeContent })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAtsResult(data);
+        fetchAtsHistory();
+      }
+    } catch (err: any) {
+      console.error("ATS Scans Failed:", err);
+    } finally {
+      setAtsLoading(false);
+    }
+  };
+
+  const triggerJdMatch = async () => {
+    if (!targetJd) return;
+    setJdLoading(true);
+    try {
+      const resumeContent = resume ? JSON.stringify(resume) : pastedText;
+      const res = await fetch("/api/jd-match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeText: resumeContent,
+          targetJd
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setJdResult(data);
+      }
+    } catch (err) {
+      console.error("Match Engine Failed:", err);
+    } finally {
+      setJdLoading(false);
+    }
+  };
 
   // Handle file choice & reading
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -920,10 +1007,10 @@ Skills: ${resume.skills.join(", ")}
           <div className="lg:col-span-7 flex flex-col gap-6 print:col-span-12 print:w-full print:p-0">
             
             {/* View Selection Selector */}
-            <div className="bg-surface border border-border p-2.5 rounded-2xl flex gap-2 print:hidden">
+            <div className="bg-surface border border-border p-2.5 rounded-2xl flex flex-wrap md:flex-nowrap gap-2 print:hidden">
               <button
                 onClick={() => setActiveTab("editor")}
-                className={`flex-grow flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-black rounded-xl transition-all ${
+                className={`flex-grow flex items-center justify-center gap-2 py-2.5 px-3 text-xs font-black rounded-xl transition-all ${
                   activeTab === "editor" 
                     ? "bg-accent/15 text-accent font-extrabold border border-accent/25" 
                     : "text-muted hover:text-text hover:bg-surface2"
@@ -934,13 +1021,38 @@ Skills: ${resume.skills.join(", ")}
               
               <button
                 onClick={() => setActiveTab("letter")}
-                className={`flex-grow flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-black rounded-xl transition-all ${
+                className={`flex-grow flex items-center justify-center gap-2 py-2.5 px-3 text-xs font-black rounded-xl transition-all ${
                   activeTab === "letter" 
                     ? "bg-accent/15 text-accent font-extrabold border border-accent/25" 
                     : "text-muted hover:text-text hover:bg-surface2"
                 }`}
               >
                 <Briefcase className="w-4 h-4" /> Cover Letter
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab("ats");
+                  triggerAtsScan();
+                }}
+                className={`flex-grow flex items-center justify-center gap-2 py-2.5 px-3 text-xs font-black rounded-xl transition-all ${
+                  activeTab === "ats" 
+                    ? "bg-accent/15 text-accent font-extrabold border border-accent/25" 
+                    : "text-muted hover:text-text hover:bg-surface2"
+                }`}
+              >
+                <Sparkles className="w-4 h-4 animate-pulse" /> ATS Score Scanner
+              </button>
+
+              <button
+                onClick={() => setActiveTab("jd_match")}
+                className={`flex-grow flex items-center justify-center gap-2 py-2.5 px-3 text-xs font-black rounded-xl transition-all ${
+                  activeTab === "jd_match" 
+                    ? "bg-accent/15 text-accent font-extrabold border border-accent/25" 
+                    : "text-muted hover:text-text hover:bg-surface2"
+                }`}
+              >
+                <Zap className="w-4 h-4" /> JD Match Engine
               </button>
             </div>
 
@@ -1419,6 +1531,269 @@ Skills: ${resume.skills.join(", ")}
                       ))}
                     </ul>
                   </div>
+                </div>
+              )}
+
+              {/* TABS CONTENT: ATS SCANNER PANEL (FEATURE 2) */}
+              {activeTab === "ats" && (
+                <div className="space-y-6">
+                  {atsLoading ? (
+                    <div className="bg-surface border border-border p-12 rounded-2xl text-center flex flex-col items-center justify-center min-h-[400px]">
+                      <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin mb-4" />
+                      <p className="font-display font-bold text-base text-text">Scanning Document Authority...</p>
+                      <p className="text-xs text-muted mt-1">Calculating applicant keywords, compliance markers, and readability weights...</p>
+                    </div>
+                  ) : atsResult ? (
+                    <div className="space-y-6 animate-fade-in text-left">
+                      {/* Live Scores Aggregates */}
+                      <div className="card grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="text-center p-3 rounded-xl bg-accent/5 border border-accent/10">
+                          <span className="font-display font-black text-2xl block text-accent">{atsResult.atsScore}</span>
+                          <span className="text-3xs text-muted uppercase tracking-wider font-extrabold">ATS Score</span>
+                        </div>
+                        <div className="text-center p-3 rounded-xl bg-surface2/50 border border-border">
+                          <span className="font-display font-black text-2xl block text-text">{atsResult.readability}</span>
+                          <span className="text-3xs text-muted uppercase tracking-wider font-extrabold">Readability</span>
+                        </div>
+                        <div className="text-center p-3 rounded-xl bg-surface2/50 border border-border">
+                          <span className="font-display font-black text-2xl block text-text">{atsResult.keywordDensity}</span>
+                          <span className="text-3xs text-muted uppercase tracking-wider font-extrabold">Keywords %</span>
+                        </div>
+                        <div className="text-center p-3 rounded-xl bg-surface2/50 border border-border">
+                          <span className="font-display font-black text-2xl block text-text">{atsResult.achievementImpact}</span>
+                          <span className="text-3xs text-muted uppercase tracking-wider font-extrabold">STAR Impact</span>
+                        </div>
+                        <div className="text-center p-3 rounded-xl bg-surface2/50 border border-border col-span-2 md:col-span-1">
+                          <span className="font-display font-black text-2xl block text-text">{atsResult.skillCoverage}</span>
+                          <span className="text-3xs text-muted uppercase tracking-wider font-extrabold">Skill Cover</span>
+                        </div>
+                      </div>
+
+                      {/* Missing Keywords tags */}
+                      <div className="card space-y-3">
+                        <h4 className="font-display font-black text-sm text-rose-400 uppercase tracking-widest flex items-center gap-1.5">
+                          <AlertCircle className="w-4.5 h-4.5" /> Missing Search Engine Optimization Keywords
+                        </h4>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {atsResult.missingKeywords?.length > 0 ? (
+                            atsResult.missingKeywords.map((kw, i) => (
+                              <span key={i} className="px-2.5 py-1 text-2xs font-bold rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                                {kw}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted">No missing optimization keywords flagged. Excellent SEO rating!</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Weak Areas & Bullet Recommendations Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="card space-y-3 bg-zinc-900/40">
+                          <h4 className="font-display font-bold text-xs text-muted uppercase tracking-widest">Structural Weak Areas</h4>
+                          <ul className="space-y-2">
+                            {atsResult.weakAreas?.map((w, idx) => (
+                              <li key={idx} className="text-2xs text-muted flex items-start gap-2">
+                                <span className="text-rose-500 font-extrabold mt-0.5">•</span>
+                                <span>{w}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="card space-y-3 bg-zinc-900/40">
+                          <h4 className="font-display font-bold text-xs text-muted uppercase tracking-widest">Recruiter Optimization Action Points</h4>
+                          <ul className="space-y-2">
+                            {atsResult.recommendations?.map((r, idx) => (
+                              <li key={idx} className="text-2xs text-muted flex items-start gap-2">
+                                <span className="text-accent font-extrabold mt-0.5">✓</span>
+                                <span>{r}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+
+                      {/* Historical Scans tracker */}
+                      {atsHistory.length > 1 && (
+                        <div className="card space-y-3">
+                          <h4 className="font-display font-black text-sm text-text uppercase tracking-widest">Version Audits & Compare Scans</h4>
+                          <div className="divide-y divide-border/60">
+                            {atsHistory.map((h, i) => (
+                              <div key={i} className="py-2.5 flex items-center justify-between text-xs">
+                                <span className="text-muted flex items-center gap-2">
+                                  <span className="p-1 rounded bg-surface2 text-muted text-3xs font-mono">Run #{atsHistory.length - i}</span>
+                                  <span>{new Date(h.created_at * 1000).toLocaleString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                                </span>
+                                <span className={`font-display font-black px-2 py-0.5 rounded text-xs ${h.atsScore >= 85 ? "text-emerald-400 bg-emerald-500/10" : "text-amber-400 bg-amber-500/10"}`}>
+                                  Score: {h.atsScore}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-surface border border-dashed border-border p-12 rounded-2xl text-center flex flex-col items-center justify-center min-h-[300px] text-muted">
+                      <Sparkles className="w-10 h-10 text-muted/30 mb-3 animate-bounce" />
+                      <p className="font-display font-black text-sm text-text">Begin ATS Scoring Scan</p>
+                      <p className="text-2xs max-w-sm mt-1">This evaluates your newly built resume against strict enterprise parameters and keyword indexes.</p>
+                      <button onClick={triggerAtsScan} className="btn-primary mt-4 py-2 px-4 text-xs font-bold">
+                        Analyze CV Now
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TABS CONTENT: JOB DESCRIPTION MATCH ENGINE (FEATURE 3) */}
+              {activeTab === "jd_match" && (
+                <div className="space-y-6 text-left">
+                  <div className="card space-y-4">
+                    <h4 className="font-display font-black text-sm text-text uppercase tracking-widest flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-accent animate-pulse" /> TARGET JOB DESCRIPTION DETAILS
+                    </h4>
+                    <div>
+                      <label className="block text-3xs font-bold text-muted uppercase tracking-wider mb-1.5">Paste Enterprise JD Text</label>
+                      <textarea
+                        rows={6}
+                        value={targetJd}
+                        onChange={(e) => setTargetJd(e.target.value)}
+                        placeholder="Paste full job posting parameters directly here..."
+                        className="w-full bg-bg border border-border rounded-xl p-3 text-xs text-text outline-none focus:border-accent resize-none transition-colors"
+                      />
+                    </div>
+
+                    <button
+                      disabled={jdLoading || !targetJd}
+                      onClick={triggerJdMatch}
+                      className="btn-primary py-3 px-5 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider"
+                    >
+                      {jdLoading ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-bg border-t-transparent rounded-full animate-spin" />
+                          <span>Matching CV against JD criteria...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 text-bg fill-current" />
+                          <span>Compare & Build Tailored Files</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {jdResult && (
+                    <div className="space-y-6 animate-fade-in text-left">
+                      {/* Match results dashboard */}
+                      <div className="card grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+                        <div className="md:col-span-5 border-b md:border-b-0 md:border-r border-border pb-5 md:pb-0 md:pr-5 text-center flex flex-col items-center justify-center">
+                          <div className="w-24 h-24 bg-accent/15 border-2 border-accent/30 rounded-full flex items-center justify-center font-display font-black text-3xl text-accent mb-2">
+                            {jdResult.matchScore}%
+                          </div>
+                          <span className="text-3xs text-muted uppercase tracking-wider font-extrabold font-mono">JD COMPATIBILITY INDEX</span>
+                        </div>
+
+                        <div className="md:col-span-7 space-y-3">
+                          <h5 className="font-display font-extrabold text-xs text-text uppercase tracking-widest pt-1">Missing JD Action Factors</h5>
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-3xs text-muted font-bold uppercase block mb-1">Missing Keywords</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {jdResult.missingKeywords?.map((kw, idx) => (
+                                  <span key={idx} className="px-1.5 py-0.5 rounded text-3xs bg-zinc-800 text-rose-300 font-bold border border-rose-500/10">{kw}</span>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-3xs text-muted font-bold uppercase block mb-1">Missing Skills</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {jdResult.missingSkills?.map((sk, idx) => (
+                                  <span key={idx} className="px-1.5 py-0.5 rounded text-3xs bg-zinc-800 text-sky-300 font-bold border border-sky-500/10">{sk}</span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Tailored suggestions list */}
+                      <div className="card space-y-2.5">
+                        <h4 className="font-display font-bold text-xs text-muted uppercase tracking-widest">Recommended Strategic Amendments</h4>
+                        <ul className="space-y-1.5 pb-1">
+                          {jdResult.recommendedChanges?.map((ch, i) => (
+                            <li key={i} className="text-2xs text-muted flex items-start gap-1.5">
+                              <span className="text-accent font-extrabold">•</span>
+                              <span>{ch}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Dynamically Generated Customized outputs templates */}
+                      <div className="space-y-4">
+                        <h4 className="font-display font-black text-sm text-text uppercase tracking-widest">TAILORED APPLICATION DOCUMENTS</h4>
+                        
+                        {/* Tailored CV */}
+                        <div className="card space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-display font-black text-xs text-accent uppercase tracking-wider">Tailored CV Segment Amendments</h5>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(jdResult.tailoredResume);
+                                alert("Tailored CV copy saved to clipboard!");
+                              }}
+                              className="btn-glass px-2 py-1 text-3xs flex items-center gap-1 text-muted"
+                            >
+                              <Copy className="w-3 h-3" /> Copy CV Copy
+                            </button>
+                          </div>
+                          <div className="bg-bg border border-border p-3.5 rounded-xl max-h-[220px] overflow-y-auto text-3xs font-mono text-muted whitespace-pre-wrap leading-relaxed">
+                            {jdResult.tailoredResume}
+                          </div>
+                        </div>
+
+                        {/* Tailored LinkedIn Profile details */}
+                        <div className="card space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-display font-black text-xs text-accent uppercase tracking-wider">Tailored LinkedIn Bio & Headline</h5>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(jdResult.tailoredLinkedIn);
+                                alert("Tailored LinkedIn details saved to clipboard!");
+                              }}
+                              className="btn-glass px-2 py-1 text-3xs flex items-center gap-1 text-muted"
+                            >
+                              <Copy className="w-3 h-3" /> Copy Profile Copy
+                            </button>
+                          </div>
+                          <div className="bg-bg border border-border p-3.5 rounded-xl max-h-[200px] overflow-y-auto text-3xs font-mono text-muted whitespace-pre-wrap leading-relaxed">
+                            {jdResult.tailoredLinkedIn}
+                          </div>
+                        </div>
+
+                        {/* Tailored cover letter generator */}
+                        <div className="card space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-display font-black text-xs text-accent uppercase tracking-wider">Specially Tailored Cover Letter Outlines</h5>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(jdResult.tailoredCoverLetter);
+                                alert("Custom cover letter text saved to clipboard!");
+                              }}
+                              className="btn-glass px-2 py-1 text-3xs flex items-center gap-1 text-muted"
+                            >
+                              <Copy className="w-3 h-3" /> Copy Letter
+                            </button>
+                          </div>
+                          <div className="bg-bg border border-border p-3.5 rounded-xl max-h-[280px] overflow-y-auto text-3xs font-mono text-muted whitespace-pre-wrap leading-relaxed">
+                            {jdResult.tailoredCoverLetter}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

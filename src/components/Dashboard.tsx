@@ -17,7 +17,9 @@ import {
   RefreshCw,
   CreditCard,
   Layers,
-  Briefcase
+  Briefcase,
+  Compass,
+  Users
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import DashboardHome from "./DashboardHome";
@@ -33,9 +35,12 @@ import FounderAnalytics from "./FounderAnalytics";
 import UpgradeModal from "./UpgradeModal";
 import BillingPage from "./BillingPage";
 import ResumeBuilder from "./ResumeBuilder";
+import LinkedInBrandScore from "./LinkedInBrandScore";
+import GrowthCopilot from "./GrowthCopilot";
+import AgencyDesk from "./AgencyDesk";
 
 type User = { id: string; name: string; email: string; picture?: string; headline?: string; about?: string };
-type View = 'dashboard' | 'analyzer' | 'generator' | 'optimizer' | 'strategy' | 'history' | 'analytics' | 'rewriter' | 'settings' | 'pricing' | 'founder' | 'billing' | 'resumebuilder';
+type View = 'dashboard' | 'analytics' | 'brandscore' | 'analyzer' | 'generator' | 'rewriter' | 'optimizer' | 'strategy' | 'copilot' | 'agency' | 'resumebuilder' | 'history' | 'pricing' | 'billing' | 'founder' | 'settings';
 
 interface DashboardProps {
   user: User;
@@ -87,11 +92,14 @@ export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardPro
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Overview' },
     { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+    { id: 'brandscore', icon: TrendingUp, label: 'Brand Score Engine' },
     { id: 'analyzer', icon: Sparkles, label: 'Profile Analyzer' },
     { id: 'generator', icon: TrendingUp, label: 'Post Generator' },
     { id: 'rewriter', icon: RefreshCw, label: 'Post Rewriter' },
     { id: 'optimizer', icon: Zap, label: 'Profile Optimizer' },
     { id: 'strategy', icon: FileText, label: 'Content Strategy' },
+    { id: 'copilot', icon: Compass, label: 'Growth Copilot' },
+    { id: 'agency', icon: Users, label: 'Agency Desk' },
     { id: 'resumebuilder', icon: Briefcase, label: 'Resume & Cover Letter' },
     { id: 'history', icon: History, label: 'Post History' },
     { id: 'pricing', icon: CreditCard, label: 'Pricing Plans' },
@@ -103,11 +111,14 @@ export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardPro
     switch (activeView) {
       case 'dashboard': return <DashboardHome user={user} onNavigate={setActiveView} />;
       case 'analytics': return <AnalyticsDashboard user={user} onNavigate={setActiveView} />;
+      case 'brandscore': return <LinkedInBrandScore user={user} />;
       case 'analyzer': return <ProfileAnalyzer user={user} onUpdateUser={onUpdateUser} />;
       case 'generator': return <PostGenerator user={user} />;
       case 'rewriter': return <PostRewriter user={user} />;
       case 'optimizer': return <ProfileOptimizer user={user} onUpdateUser={onUpdateUser} />;
       case 'strategy': return <ContentStrategy user={user} />;
+      case 'copilot': return <GrowthCopilot user={user} />;
+      case 'agency': return <AgencyDesk user={user} currentPlan={subscription?.plan || "free"} />;
       case 'resumebuilder': return <ResumeBuilder user={user} />;
       case 'history': return <PostHistory user={user} />;
       case 'pricing': return <PricingPage user={user} currentPlan={subscription?.plan || "free"} onUpgradeSuccess={fetchSubscription} />;
