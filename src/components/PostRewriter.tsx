@@ -67,7 +67,7 @@ export default function PostRewriter({ user }: PostRewriterProps) {
           "variations": []
         }`;
 
-        const genData = await generatePost({ topic: tone, postType: "Rewrite", tone, context: originalContent, targetAudience: "LinkedIn Professionals" });
+        const genData = await generatePost({ topic: tone, postType: "Rewrite", tone, context: originalContent, targetAudience: "LinkedIn Professionals" }, user.id);
         const scoreData = await scorePost(genData.post);
 
         newVariants.push({

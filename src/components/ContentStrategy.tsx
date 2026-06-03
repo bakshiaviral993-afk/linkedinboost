@@ -42,8 +42,15 @@ export default function ContentStrategy({ user }: ContentStrategyProps) {
       const res = await fetch("/api/content-strategy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, userId: user.id })
       });
+      if (res.status === 403) {
+        const errorData = await res.json().catch(() => ({}));
+        window.dispatchEvent(new CustomEvent("limit-reached", {
+          detail: { reason: errorData.error || "You've used all 2 free roadmap generations." }
+        }));
+        throw new Error(errorData.error || "Free roadmap limit reached.");
+      }
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setStrategy(data);

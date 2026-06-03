@@ -1,5 +1,8 @@
 {
   "name": "Narratiq",
   "description": "AI-powered LinkedIn growth engine for BFSI and enterprise professionals. Built by Aviral Bakshi.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

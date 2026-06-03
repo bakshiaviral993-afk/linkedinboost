@@ -3,7 +3,7 @@ import { Sparkles, TrendingUp, Zap, FileText, ArrowRight, Lightbulb, Target, Use
 import { motion } from "motion/react";
 
 type User = { id: string; name: string; email: string; picture?: string; headline?: string; about?: string };
-type View = 'dashboard' | 'analyzer' | 'generator' | 'optimizer' | 'strategy' | 'history' | 'analytics' | 'rewriter' | 'settings';
+type View = 'dashboard' | 'analyzer' | 'generator' | 'optimizer' | 'strategy' | 'history' | 'analytics' | 'rewriter' | 'settings' | 'resumebuilder';
 
 interface DashboardHomeProps {
   user: User;
@@ -20,6 +20,7 @@ export default function DashboardHome({ user, onNavigate }: DashboardHomeProps) 
     { id: 'generator', icon: TrendingUp, title: "Generate Post", desc: "Create viral content", color: "text-accent2", bg: "bg-accent2/10" },
     { id: 'rewriter', icon: RefreshCw, title: "Rewrite Post", desc: "Optimize existing content", color: "text-gold", bg: "bg-gold/10" },
     { id: 'analyzer', icon: Sparkles, title: "Analyze Profile", desc: "Get your LinkedIn score", color: "text-success", bg: "bg-success/10" },
+    { id: 'resumebuilder', icon: FileText, title: "Resume Builder", desc: "ATS-optimized CV & letters", color: "text-accent", bg: "bg-accent/15" },
   ];
 
   const stats = [
@@ -82,7 +83,7 @@ export default function DashboardHome({ user, onNavigate }: DashboardHomeProps) 
           <Zap className="w-6 h-6 text-accent" />
           Quick Actions
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {quickActions.map((action, i) => (
             <motion.button
               key={i}

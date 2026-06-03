@@ -14,7 +14,10 @@ import {
   Search,
   Plus,
   BarChart3,
-  RefreshCw
+  RefreshCw,
+  CreditCard,
+  Layers,
+  Briefcase
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import DashboardHome from "./DashboardHome";
@@ -25,18 +28,53 @@ import ContentStrategy from "./ContentStrategy";
 import PostHistory from "./PostHistory";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import PostRewriter from "./PostRewriter";
+import PricingPage from "./PricingPage";
+import FounderAnalytics from "./FounderAnalytics";
+import UpgradeModal from "./UpgradeModal";
+import BillingPage from "./BillingPage";
+import ResumeBuilder from "./ResumeBuilder";
 
 type User = { id: string; name: string; email: string; picture?: string; headline?: string; about?: string };
-type View = 'dashboard' | 'analyzer' | 'generator' | 'optimizer' | 'strategy' | 'history' | 'analytics' | 'rewriter' | 'settings';
+type View = 'dashboard' | 'analyzer' | 'generator' | 'optimizer' | 'strategy' | 'history' | 'analytics' | 'rewriter' | 'settings' | 'pricing' | 'founder' | 'billing' | 'resumebuilder';
 
 interface DashboardProps {
   user: User;
   onLogout: () => void;
+  onUpdateUser: (updated: Partial<User>) => void;
 }
 
-export default function Dashboard({ user, onLogout }: DashboardProps) {
+export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  const [subscription, setSubscription] = useState<{ plan: string; profile_analyses_used: number; posts_generated_used: number; roadmaps_generated_used: number } | null>(null);
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState("");
+
+  const fetchSubscription = async () => {
+    try {
+      const res = await fetch(`/api/subscription/${user.id}`);
+      if (res.ok) {
+        const sub = await res.json();
+        setSubscription(sub);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubscription();
+  }, [user.id]);
+
+  useEffect(() => {
+    const handleLimitReached = (e: any) => {
+      setUpgradeReason(e.detail?.reason || "You've reached your free action limit.");
+      setIsUpgradeOpen(true);
+    };
+    window.addEventListener("limit-reached", handleLimitReached);
+    return () => window.removeEventListener("limit-reached", handleLimitReached);
+  }, []);
 
   useEffect(() => {
     const handleNavigate = (e: any) => {
@@ -54,19 +92,27 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     { id: 'rewriter', icon: RefreshCw, label: 'Post Rewriter' },
     { id: 'optimizer', icon: Zap, label: 'Profile Optimizer' },
     { id: 'strategy', icon: FileText, label: 'Content Strategy' },
+    { id: 'resumebuilder', icon: Briefcase, label: 'Resume & Cover Letter' },
     { id: 'history', icon: History, label: 'Post History' },
+    { id: 'pricing', icon: CreditCard, label: 'Pricing Plans' },
+    { id: 'billing', icon: CreditCard, label: 'Billing & Usage' },
+    { id: 'founder', icon: Layers, label: 'Founder Desk' },
   ];
 
   const renderView = () => {
     switch (activeView) {
       case 'dashboard': return <DashboardHome user={user} onNavigate={setActiveView} />;
-      case 'analytics': return <AnalyticsDashboard user={user} />;
-      case 'analyzer': return <ProfileAnalyzer user={user} />;
+      case 'analytics': return <AnalyticsDashboard user={user} onNavigate={setActiveView} />;
+      case 'analyzer': return <ProfileAnalyzer user={user} onUpdateUser={onUpdateUser} />;
       case 'generator': return <PostGenerator user={user} />;
       case 'rewriter': return <PostRewriter user={user} />;
-      case 'optimizer': return <ProfileOptimizer user={user} />;
+      case 'optimizer': return <ProfileOptimizer user={user} onUpdateUser={onUpdateUser} />;
       case 'strategy': return <ContentStrategy user={user} />;
+      case 'resumebuilder': return <ResumeBuilder user={user} />;
       case 'history': return <PostHistory user={user} />;
+      case 'pricing': return <PricingPage user={user} currentPlan={subscription?.plan || "free"} onUpgradeSuccess={fetchSubscription} />;
+      case 'billing': return <BillingPage user={user} subscription={subscription} onNavigate={setActiveView} onRefreshSubscription={fetchSubscription} />;
+      case 'founder': return <FounderAnalytics user={user} currentPlan={subscription?.plan || "free"} onPlanChanged={fetchSubscription} />;
       case 'settings': return <div className="p-8"><h2 className="text-3xl font-display font-bold mb-8">Settings</h2><div className="card">Account settings coming soon.</div></div>;
       default: return <DashboardHome user={user} onNavigate={setActiveView} />;
     }
@@ -75,7 +121,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   return (
     <div className="min-h-screen bg-bg flex overflow-hidden">
       {/* Sidebar */}
-      <aside className={`bg-surface border-r border-border transition-all duration-300 flex flex-col z-50 ${isSidebarOpen ? 'w-[280px]' : 'w-[80px]'}`}>
+      <aside className={`bg-surface border-r border-border transition-all duration-300 flex flex-col z-50 print:hidden ${isSidebarOpen ? 'w-[280px]' : 'w-[80px]'}`}>
         <div className="p-6 flex items-center justify-between">
           {isSidebarOpen && (
             <div className="flex items-center gap-2">
@@ -125,7 +171,22 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             {isSidebarOpen && (
               <div className="flex-grow overflow-hidden">
                 <div className="font-bold text-sm truncate">{user.name}</div>
-                <div className="text-xs text-muted truncate">{user.email}</div>
+                <div className="flex items-center gap-1.5 overflow-hidden">
+                  <span className="text-xs text-muted truncate max-w-[120px]">{user.email}</span>
+                  {subscription?.plan && (
+                    <span className={`px-1.5 py-0.5 text-[8px] font-extrabold rounded uppercase tracking-wider flex-shrink-0 ${
+                      subscription.plan === 'free' 
+                        ? 'bg-muted/10 text-muted border border-muted/20' 
+                        : subscription.plan === 'pro' 
+                          ? 'bg-accent/15 text-accent border border-accent/25' 
+                          : subscription.plan === 'creator'
+                            ? 'bg-accent2/15 text-accent2 border border-accent2/25'
+                            : 'bg-gold/15 text-gold border border-gold/25'
+                    }`}>
+                      {subscription.plan}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -152,7 +213,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       {/* Main Content */}
       <main className="flex-grow overflow-y-auto relative flex flex-col">
         {/* Top Bar */}
-        <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur-md border-b border-border px-8 py-4 flex justify-between items-center">
+        <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur-md border-b border-border px-8 py-4 flex justify-between items-center print:hidden">
           <div className="flex items-center gap-4 bg-surface2 border border-border px-4 py-2 rounded-xl w-full max-w-md">
             <Search className="w-4 h-4 text-muted" />
             <input 
@@ -178,7 +239,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         </header>
 
         {/* View Container */}
-        <div className="p-8 flex-grow">
+        <div className="p-8 flex-grow print:p-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeView}
@@ -205,6 +266,14 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </div>
         </footer>
       </main>
+
+      <UpgradeModal 
+        isOpen={isUpgradeOpen} 
+        onClose={() => setIsUpgradeOpen(false)} 
+        reason={upgradeReason} 
+        userId={user.id} 
+        onUpgradeSuccess={fetchSubscription} 
+      />
     </div>
   );
 }

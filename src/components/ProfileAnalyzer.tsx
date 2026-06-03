@@ -7,37 +7,43 @@ type User = { id: string; name: string; email: string; picture?: string; headlin
 
 interface ProfileAnalyzerProps {
   user: User;
+  onUpdateUser?: (updated: Partial<User>) => void;
 }
 
-export default function ProfileAnalyzer({ user }: ProfileAnalyzerProps) {
+export default function ProfileAnalyzer({ user, onUpdateUser }: ProfileAnalyzerProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<ProfileAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'roadmap' | 'details' | 'fixes'>('overview');
 
+  const [editHeadline, setEditHeadline] = useState(user.headline || "");
+  const [editAbout, setEditAbout] = useState(user.about || "");
+
+  useEffect(() => {
+    if (user.headline) setEditHeadline(user.headline);
+    if (user.about) setEditAbout(user.about);
+  }, [user.headline, user.about]);
+
   const runAnalysisAutomatically = async () => {
     setIsAnalyzing(true);
     setError(null);
     try {
-      // First try to load the latest saved analysis for this user
       const res = await fetch(`/api/analysis/${user.id}`);
       if (res.ok) {
         const stored = await res.json();
         setAnalysis(stored);
       } else {
-        // If not found, run a deep analysis automatically from LinkedIn profile details
         const autoData = {
           name: user.name,
-          headline: user.headline || "Senior Executive & Thought Leader",
-          about: user.about || "Senior BFSI technology leader focused on digital transformation and market-driven product strategies.",
-          industry: "Finance / BFSI & Fintech",
-          experience: "Strategic executive roles guiding corporate governance, tech operations, and fintech innovations.",
-          skills: "BFSI Strategy, Fintech, Financial Planning, Portfolio Optimization, Leadership, Digital Transformation",
+          headline: user.headline || editHeadline || "Senior Executive & Thought Leader",
+          about: user.about || editAbout || "Senior BFSI technology leader focused on digital transformation.",
+          industry: "Professional Network / Targeted Sector",
+          experience: user.about || editAbout || "Strategic executive roles guiding business operations.",
+          skills: user.headline ? `${user.headline}, Leadership` : "Leadership, Strategy, Growth",
           connections: "500+"
         };
-        const data = await analyzeProfile(autoData);
+        const data = await analyzeProfile(autoData, user.id);
         setAnalysis(data);
-        // Save to SQLite
         await fetch("/api/save-analysis", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -45,6 +51,11 @@ export default function ProfileAnalyzer({ user }: ProfileAnalyzerProps) {
         });
       }
     } catch (err: any) {
+      if (err.limitReached) {
+        window.dispatchEvent(new CustomEvent("limit-reached", {
+          detail: { reason: err.message }
+        }));
+      }
       setError(err.message || "Failed to analyze profile automatically. Please try again.");
     } finally {
       setIsAnalyzing(false);
@@ -61,22 +72,26 @@ export default function ProfileAnalyzer({ user }: ProfileAnalyzerProps) {
     try {
       const autoData = {
         name: user.name,
-        headline: user.headline || "Senior Executive & Thought Leader",
-        about: user.about || "Senior BFSI technology leader focused on digital transformation and market-driven product strategies.",
-        industry: "Finance / BFSI & Fintech",
-        experience: "Strategic executive roles guiding corporate governance, tech operations, and fintech innovations.",
-        skills: "BFSI Strategy, Fintech, Financial Planning, Portfolio Optimization, Leadership, Digital Transformation",
+        headline: editHeadline || user.headline || "Senior Executive & Thought Leader",
+        about: editAbout || user.about || "Senior BFSI technology leader focused on digital transformation.",
+        industry: "Professional Network / Targeted Sector",
+        experience: editAbout || user.about || "Strategic executive roles guiding business operations.",
+        skills: editHeadline ? `${editHeadline}, Leadership` : "Leadership, Strategy, Growth",
         connections: "500+"
       };
-      const data = await analyzeProfile(autoData);
+      const data = await analyzeProfile(autoData, user.id);
       setAnalysis(data);
-      // Save to SQLite
       await fetch("/api/save-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user.id, analysis: data })
       });
     } catch (err: any) {
+      if (err.limitReached) {
+        window.dispatchEvent(new CustomEvent("limit-reached", {
+          detail: { reason: err.message }
+        }));
+      }
       setError(err.message || "Failed to re-analyze profile. Please try again.");
     } finally {
       setIsAnalyzing(false);
@@ -108,6 +123,98 @@ export default function ProfileAnalyzer({ user }: ProfileAnalyzerProps) {
           </button>
         )}
       </header>
+
+      {/* Profile Blueprint Customizer */}
+      <div className="card space-y-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-accent animate-pulse" />
+            <h3 className="font-display font-bold text-lg">My LinkedIn Profile Blueprint</h3>
+          </div>
+          <span className="text-xs text-muted">
+            {user.headline ? "✨ Tailored to your LinkedIn data" : "💡 Fill this once to save and auto-generate tailored roadmaps"}
+          </span>
+        </div>
+        
+        <form onSubmit={async (e) => {
+          e.preventDefault();
+          setIsAnalyzing(true);
+          setError(null);
+          try {
+            const profileRes = await fetch(`/api/user/${user.id}/profile`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ headline: editHeadline, about: editAbout })
+            });
+            if (!profileRes.ok) throw new Error("Failed to save profile details.");
+            
+            onUpdateUser?.({ headline: editHeadline, about: editAbout });
+
+            const autoData = {
+              name: user.name,
+              headline: editHeadline,
+              about: editAbout,
+              industry: "Professional Network / Targeted Sector",
+              experience: editAbout,
+              skills: `${editHeadline}, Professional Growth`,
+              connections: "500+"
+            };
+            const data = await analyzeProfile(autoData, user.id);
+            setAnalysis(data);
+            
+            await fetch("/api/save-analysis", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: user.id, analysis: data })
+            });
+          } catch (err: any) {
+            if (err.limitReached) {
+              window.dispatchEvent(new CustomEvent("limit-reached", {
+                detail: { reason: err.message }
+              }));
+            }
+            setError(err.message || "Failed to update profile template.");
+          } finally {
+            setIsAnalyzing(false);
+          }
+        }} className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+          <div className="md:col-span-4 space-y-2">
+            <label className="text-xs font-bold text-muted uppercase tracking-widest">My Headline</label>
+            <input 
+              type="text"
+              placeholder="e.g. AI Consultant & Tech Founder"
+              value={editHeadline}
+              onChange={(e) => setEditHeadline(e.target.value)}
+              className="input w-full"
+              required
+            />
+          </div>
+          <div className="md:col-span-6 space-y-2">
+            <label className="text-xs font-bold text-muted uppercase tracking-widest">My Profile Summary (About)</label>
+            <textarea 
+              rows={1}
+              placeholder="Brief summary of your professional expertise, goals..."
+              value={editAbout}
+              onChange={(e) => setEditAbout(e.target.value)}
+              className="input w-full resize-none py-2 px-3 h-[42px] content-center"
+              required
+            />
+          </div>
+          <div className="md:col-span-2">
+            <button 
+              type="submit" 
+              disabled={isAnalyzing}
+              className="btn-primary w-full h-[42px]"
+            >
+              {isAnalyzing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Save & Audit"
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
 
       {error && (
         <div className="p-4 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm flex items-center gap-2">

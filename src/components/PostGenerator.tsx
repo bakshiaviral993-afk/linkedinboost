@@ -82,7 +82,7 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
     }
 
     try {
-      const data = await generatePost(formData);
+      const data = await generatePost(formData, user.id);
       setResult(data);
       
       // Append hashtags to the post content so they are published together
@@ -102,6 +102,11 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
         })
       }).catch(err => console.error("Failed to save post:", err));
     } catch (err: any) {
+      if (err.limitReached) {
+        window.dispatchEvent(new CustomEvent("limit-reached", {
+          detail: { reason: err.message }
+        }));
+      }
       setError(err.message);
     } finally {
       setIsGenerating(false);

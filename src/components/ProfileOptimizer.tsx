@@ -7,9 +7,10 @@ type User = { id: string; name: string; email: string; picture?: string; headlin
 
 interface ProfileOptimizerProps {
   user: User;
+  onUpdateUser?: (updated: Partial<User>) => void;
 }
 
-export default function ProfileOptimizer({ user }: ProfileOptimizerProps) {
+export default function ProfileOptimizer({ user, onUpdateUser }: ProfileOptimizerProps) {
   const [activeSection, setActiveSection] = useState<'headline' | 'about' | 'experience'>('headline');
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [result, setResult] = useState<OptimizationResult | null>(null);
@@ -19,6 +20,17 @@ export default function ProfileOptimizer({ user }: ProfileOptimizerProps) {
     content: "",
     context: ""
   });
+
+  React.useEffect(() => {
+    let content = "";
+    if (activeSection === 'headline') {
+      content = user.headline || "";
+    } else if (activeSection === 'about') {
+      content = user.about || "";
+    }
+    setFormData(prev => ({ ...prev, content }));
+    setResult(null);
+  }, [activeSection, user.headline, user.about]);
 
   const sections = [
     { id: 'headline', label: 'Headline', icon: Target, color: 'text-accent', bg: 'bg-accent/10' },
@@ -147,6 +159,33 @@ export default function ProfileOptimizer({ user }: ProfileOptimizerProps) {
                         <div className="text-[10px] font-bold text-muted uppercase tracking-widest">SEO Score</div>
                         <div className="text-xl font-mono font-bold text-accent">{result.seoScore}</div>
                       </div>
+                      {(activeSection === 'headline' || activeSection === 'about') && (
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const updated = {
+                                headline: activeSection === 'headline' ? result.optimized : user.headline,
+                                about: activeSection === 'about' ? result.optimized : user.about
+                              };
+                              const profileRes = await fetch(`/api/user/${user.id}/profile`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify(updated)
+                              });
+                              if (profileRes.ok) {
+                                onUpdateUser?.(updated);
+                              }
+                            } catch (err) {
+                              console.error("Failed to save optimized profile item", err);
+                            }
+                          }} 
+                          className="btn-primary py-1.5 px-3 text-xs flex items-center gap-1.5 whitespace-nowrap"
+                          title="Save optimized version directly to your profile"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          Apply to Blueprint
+                        </button>
+                      )}
                       <button onClick={handleCopy} className="p-2 hover:bg-surface2 rounded-lg text-muted transition-all" title="Copy to clipboard">
                         <Copy className="w-5 h-5" />
                       </button>

@@ -43,6 +43,12 @@ export default function App() {
     setUser(null);
   };
 
+  const handleUpdateUser = (updatedData: Partial<User>) => {
+    if (user) {
+      setUser({ ...user, ...updatedData });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center">
@@ -57,7 +63,7 @@ export default function App() {
   return (
     <>
       {user ? (
-        <Dashboard user={user} onLogout={handleLogout} />
+        <Dashboard user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />
       ) : (
         <Landing onAuthSuccess={handleAuthSuccess} />
       )}

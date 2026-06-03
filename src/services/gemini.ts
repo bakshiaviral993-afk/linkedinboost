@@ -1,7 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
-// The platform injects GEMINI_API_KEY into the environment
-const ai = new GoogleGenAI({ apiKey: (import.meta as any).env?.VITE_GEMINI_API_KEY || (process as any).env?.GEMINI_API_KEY || "" });
+// Gemini API services handled server-side to secure keys.
 
 export interface ProfileAnalysis {
   overallScore: number;
@@ -58,153 +55,142 @@ export interface OptimizationResult {
   seoScore: number;
 }
 
-export async function analyzeProfile(profileData: any): Promise<ProfileAnalysis> {
-  const systemPrompt = "You are an elite LinkedIn growth strategist who has helped 500+ professionals reach top 1% profile visibility. Be brutally honest, specific, and actionable. Return ONLY valid JSON with no markdown fences.";
-  const prompt = `Analyze this LinkedIn profile data and provide a deep analysis.
-  Profile Data: ${JSON.stringify(profileData)}
-  
-  Return this exact JSON shape:
-  {
-    "overallScore": 85,
-    "grade": "A",
-    "categories": {
-      "headline": { "score": 70, "feedback": "...", "optimized": "..." },
-      "about": { "score": 65, "feedback": "...", "optimized": "..." },
-      "experience": { "score": 80, "feedback": "..." },
-      "skills": { "score": 75, "feedback": "...", "suggested": ["skill1", "skill2", "skill3"] },
-      "network": { "score": 60, "feedback": "..." }
-    },
-    "strengths": ["strength1", "strength2", "strength3"],
-    "criticalFixes": ["fix1", "fix2", "fix3"],
-    "profilePowerStatement": "One powerful sentence about unique value",
-    "competitorGap": "What top performers in this space have that this profile lacks",
-    "viralityPotential": "high",
-    "targetAudienceReach": "description",
-    "roadmap30Days": [
-      {
-        "week": "Week 1: Headline & Core Hook",
-        "focus": "Strengthening headline messaging and profile SEO",
-        "actionItems": ["Rewrite headline using the optimized AI version", "Detail standard FinTech or BFSI metrics in experience"],
-        "contentIdeas": ["A post on FinTech/industry digital transformation benchmarks", "A personal career lesson story"]
-      },
-      {
-        "week": "Week 2: Storytelling & Authority",
-        "focus": "...",
-        "actionItems": ["...", "..."],
-        "contentIdeas": ["...", "..."]
-      },
-      {
-        "week": "Week 3: Engagement & Networking Integration",
-        "focus": "...",
-        "actionItems": ["...", "..."],
-        "contentIdeas": ["...", "..."]
-      },
-      {
-        "week": "Week 4: Scaling Lead Generation",
-        "focus": "...",
-        "actionItems": ["...", "..."],
-        "contentIdeas": ["...", "..."]
-      }
-    ]
-  }`;
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      systemInstruction: systemPrompt,
-      responseMimeType: "application/json",
-    },
+export async function analyzeProfile(profileData: any, userId: string): Promise<ProfileAnalysis> {
+  const response = await fetch("/api/analyze-profile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, profileData })
   });
 
-  return JSON.parse(response.text || "{}");
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    const err = new Error(errData.error || "Failed to analyze profile");
+    (err as any).limitReached = errData.limitReached || response.status === 403;
+    throw err;
+  }
+
+  return response.json();
 }
 
-export async function generatePost(formData: any): Promise<PostGeneration> {
-  const systemPrompt = "You are a LinkedIn viral content expert. Posts you've written have reached 100k+ impressions. You understand the LinkedIn algorithm deeply. Return ONLY valid JSON.";
-  const prompt = `Generate a viral LinkedIn post for a ${formData.postType} about "${formData.topic}".
-  Tone: ${formData.tone}
-  Context: ${formData.context}
-  Target Audience: ${formData.targetAudience}
-  
-  Return this exact JSON shape:
-  {
-    "post": "full post text with \\n line breaks",
-    "hook": "just the first line",
-    "viralityScore": 85,
-    "viralityReason": "why this will perform well",
-    "bestPostingTime": "Tuesday 8-9am",
-    "hashtags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
-    "engagementPrediction": { "likes": "200-500", "comments": "30-80", "reposts": "20-50" },
-    "variations": ["alternative hook 1", "alternative hook 2"]
-  }`;
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      systemInstruction: systemPrompt,
-      responseMimeType: "application/json",
-    },
+export async function generatePost(formData: any, userId: string): Promise<PostGeneration> {
+  const response = await fetch("/api/generate-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, formData })
   });
 
-  return JSON.parse(response.text || "{}");
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    const err = new Error(errData.error || "Failed to generate post");
+    (err as any).limitReached = errData.limitReached || response.status === 403;
+    throw err;
+  }
+
+  return response.json();
 }
 
 export async function scorePost(content: string): Promise<PostScore> {
-  const systemPrompt = "You are a LinkedIn algorithm specialist. You analyze content for virality potential. Return ONLY valid JSON.";
-  const prompt = `Analyze and score this LinkedIn post content:
-  "${content}"
-  
-  Return this exact JSON shape:
-  {
-    "viralityScore": 85,
-    "hookStrength": 90,
-    "readabilityScore": 80,
-    "valueScore": 75,
-    "emotionalResonance": 70,
-    "ctaStrength": 65,
-    "verdict": "Short summary of the post's potential",
-    "topFix": "The single most important change to make",
-    "improvedHook": "A better version of the first line",
-    "predictedImpressions": "1k-5k"
-  }`;
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      systemInstruction: systemPrompt,
-      responseMimeType: "application/json",
-    },
+  const response = await fetch("/api/score-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content })
   });
 
-  return JSON.parse(response.text || "{}");
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to score post: ${errorText}`);
+  }
+
+  return response.json();
 }
 
 export async function optimizeSection(section: string, content: string, context: string): Promise<OptimizationResult> {
-  const systemPrompt = "You are a LinkedIn profile optimization expert. You help professionals stand out with high-impact copy. Return ONLY valid JSON.";
-  const prompt = `Optimize this LinkedIn ${section} section.
-  Current Content: ${content}
-  Context: ${context}
-  
-  Return this exact JSON shape:
-  {
-    "optimized": "the full rewritten content",
-    "keyImprovements": ["improvement 1", "improvement 2", "improvement 3"],
-    "keywordsAdded": ["keyword 1", "keyword 2"],
-    "seoScore": 95
-  }`;
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      systemInstruction: systemPrompt,
-      responseMimeType: "application/json",
-    },
+  const response = await fetch("/api/optimize-section", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ section, content, context })
   });
 
-  return JSON.parse(response.text || "{}");
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to optimize section: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+export interface ResumeData {
+  name: string;
+  email: string;
+  phone: string;
+  website?: string;
+  linkedin?: string;
+  summary: string;
+  experience: {
+    role: string;
+    company: string;
+    duration: string;
+    bullets: string[];
+  }[];
+  education: {
+    degree: string;
+    school: string;
+    year: string;
+  }[];
+  skills: string[];
+  projects?: {
+    name: string;
+    description: string;
+    bullets: string[];
+  }[];
+  atsScore: number;
+  atsFeedback: string[];
+}
+
+export interface CoverLetterData {
+  subjectLine?: string;
+  letter: string;
+  keyHooksUsed: string[];
+}
+
+export async function generateResume(params: {
+  userId: string;
+  fileBase64?: string;
+  fileType?: string;
+  pastedText?: string;
+}): Promise<ResumeData> {
+  const response = await fetch("/api/generate-resume", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to generate optimized ATM resume");
+  }
+
+  return response.json();
+}
+
+export async function generateCoverLetter(params: {
+  userId: string;
+  resumeText: string;
+  companyName: string;
+  jobTitle: string;
+  tone: string;
+}): Promise<CoverLetterData> {
+  const response = await fetch("/api/generate-cover-letter", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to generate matching Cover Letter");
+  }
+
+  return response.json();
 }
 
