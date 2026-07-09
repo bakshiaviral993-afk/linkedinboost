@@ -38,9 +38,23 @@ import ResumeBuilder from "./ResumeBuilder";
 import LinkedInBrandScore from "./LinkedInBrandScore";
 import GrowthCopilot from "./GrowthCopilot";
 import AgencyDesk from "./AgencyDesk";
+import DailyGrowth from "./DailyGrowth";
+import CareerCopilot from "./CareerCopilot";
+import SupportCenterModal from "./SupportCenterModal";
+import PrivacyPolicyModal from "./PrivacyPolicyModal";
+import TermsOfServiceModal from "./TermsOfServiceModal";
 
-type User = { id: string; name: string; email: string; picture?: string; headline?: string; about?: string };
-type View = 'dashboard' | 'analytics' | 'brandscore' | 'analyzer' | 'generator' | 'rewriter' | 'optimizer' | 'strategy' | 'copilot' | 'agency' | 'resumebuilder' | 'history' | 'pricing' | 'billing' | 'founder' | 'settings';
+type User = { 
+  id: string; 
+  name: string; 
+  email: string; 
+  picture?: string; 
+  headline?: string; 
+  about?: string;
+  followers_count?: number;
+  connections_count?: number;
+};
+type View = 'dashboard' | 'analytics' | 'brandscore' | 'analyzer' | 'generator' | 'rewriter' | 'optimizer' | 'strategy' | 'copilot' | 'agency' | 'resumebuilder' | 'history' | 'pricing' | 'billing' | 'founder' | 'settings' | 'dailygrowth' | 'careercopilot';
 
 interface DashboardProps {
   user: User;
@@ -51,6 +65,10 @@ interface DashboardProps {
 export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardProps) {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
   
   const [subscription, setSubscription] = useState<{ plan: string; profile_analyses_used: number; posts_generated_used: number; roadmaps_generated_used: number } | null>(null);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
@@ -92,6 +110,8 @@ export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardPro
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Overview' },
     { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+    { id: 'dailygrowth', icon: Zap, label: 'Daily Growth Agent ⚡' },
+    { id: 'careercopilot', icon: Briefcase, label: 'AI Career Copilot 🚀' },
     { id: 'brandscore', icon: TrendingUp, label: 'Brand Score Engine' },
     { id: 'analyzer', icon: Sparkles, label: 'Profile Analyzer' },
     { id: 'generator', icon: TrendingUp, label: 'Post Generator' },
@@ -118,6 +138,8 @@ export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardPro
       case 'optimizer': return <ProfileOptimizer user={user} onUpdateUser={onUpdateUser} />;
       case 'strategy': return <ContentStrategy user={user} />;
       case 'copilot': return <GrowthCopilot user={user} />;
+      case 'dailygrowth': return <DailyGrowth user={user} />;
+      case 'careercopilot': return <CareerCopilot user={user} />;
       case 'agency': return <AgencyDesk user={user} currentPlan={subscription?.plan || "free"} />;
       case 'resumebuilder': return <ResumeBuilder user={user} />;
       case 'history': return <PostHistory user={user} />;
@@ -133,7 +155,7 @@ export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardPro
     <div className="min-h-screen bg-bg flex overflow-hidden">
       {/* Sidebar */}
       <aside className={`bg-surface border-r border-border transition-all duration-300 flex flex-col z-50 print:hidden ${isSidebarOpen ? 'w-[280px]' : 'w-[80px]'}`}>
-        <div className="p-6 flex items-center justify-between">
+        <div className="h-[73px] px-6 flex items-center justify-between border-b border-border">
           {isSidebarOpen && (
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-accent to-accent2 rounded-lg flex items-center justify-center">
@@ -144,7 +166,7 @@ export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardPro
           )}
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-surface2 rounded-lg transition-colors"
+            className="p-2 hover:bg-surface2 rounded-lg transition-colors flex items-center justify-center"
           >
             <ChevronRight className={`w-5 h-5 transition-transform ${isSidebarOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -198,6 +220,11 @@ export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardPro
                     </span>
                   )}
                 </div>
+                <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono text-muted/80">
+                  <span>{user.followers_count !== undefined ? Number(user.followers_count).toLocaleString() : "1,280"} FLW</span>
+                  <span>•</span>
+                  <span>{user.connections_count !== undefined ? Number(user.connections_count).toLocaleString() : "500"}+ CON</span>
+                </div>
               </div>
             )}
           </div>
@@ -224,27 +251,27 @@ export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardPro
       {/* Main Content */}
       <main className="flex-grow overflow-y-auto relative flex flex-col">
         {/* Top Bar */}
-        <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur-md border-b border-border px-8 py-4 flex justify-between items-center print:hidden">
-          <div className="flex items-center gap-4 bg-surface2 border border-border px-4 py-2 rounded-xl w-full max-w-md">
-            <Search className="w-4 h-4 text-muted" />
+        <header className="sticky top-0 z-40 bg-bg/85 backdrop-blur-md border-b border-border px-8 h-[73px] flex justify-between items-center print:hidden">
+          <div className="h-10 flex items-center gap-4 bg-surface2 border border-border px-4 rounded-xl w-full max-w-md">
+            <Search className="w-4 h-4 text-muted flex-shrink-0" />
             <input 
               type="text" 
               placeholder="Search features, posts, or insights..." 
-              className="bg-transparent border-none outline-none text-sm w-full"
+              className="bg-transparent border-none outline-none text-sm w-full h-full"
             />
           </div>
           <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-surface2 rounded-xl text-muted hover:text-text transition-all relative">
+            <button className="w-10 h-10 flex items-center justify-center hover:bg-surface2 rounded-xl text-muted hover:text-text transition-all relative">
               <Bell className="w-5 h-5" />
-              <div className="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full border-2 border-bg" />
+              <div className="absolute top-2.5 right-2.5 w-2 h-2 bg-accent rounded-full border border-bg" />
             </button>
             <div className="h-8 w-[1px] bg-border mx-2" />
             <button 
               onClick={() => setActiveView('generator')}
-              className="btn-primary py-2 px-4 text-sm h-10"
+              className="btn-primary px-4 text-sm h-10 flex items-center gap-2"
             >
-              <Plus className="w-4 h-4" />
-              New Post
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span>New Post</span>
             </button>
           </div>
         </header>
@@ -268,12 +295,30 @@ export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardPro
         {/* Footer Branding */}
         <footer className="px-8 py-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 bg-surface/50">
           <div className="text-xs text-muted">
-            © 2026 Narratiq · Built by <span className="text-text font-bold">Aviral Bakshi</span> · <a href="https://aviral.in" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">aviral.in</a>
+            © 2026 Narratiq
           </div>
           <div className="flex gap-6 text-[10px] font-bold text-muted uppercase tracking-widest">
-            <a href="#" className="hover:text-accent transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-accent transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-accent transition-colors">Support</a>
+            <button 
+              type="button"
+              onClick={() => setIsPrivacyOpen(true)}
+              className="hover:text-accent transition-colors bg-transparent border-0 cursor-pointer p-0 font-bold uppercase tracking-widest text-[10px]"
+            >
+              Privacy Policy
+            </button>
+            <button 
+              type="button"
+              onClick={() => setIsTermsOpen(true)}
+              className="hover:text-accent transition-colors bg-transparent border-0 cursor-pointer p-0 font-bold uppercase tracking-widest text-[10px]"
+            >
+              Terms of Service
+            </button>
+            <button 
+              type="button"
+              onClick={() => setIsSupportOpen(true)}
+              className="hover:text-accent transition-colors bg-transparent border-0 cursor-pointer p-0 font-bold uppercase tracking-widest text-[10px]"
+            >
+              Support
+            </button>
           </div>
         </footer>
       </main>
@@ -285,6 +330,29 @@ export default function Dashboard({ user, onLogout, onUpdateUser }: DashboardPro
         userId={user.id} 
         onUpgradeSuccess={fetchSubscription} 
       />
+
+      <AnimatePresence>
+        {isSupportOpen && (
+          <SupportCenterModal 
+            isOpen={isSupportOpen} 
+            onClose={() => setIsSupportOpen(false)} 
+            userEmail={user.email}
+            userId={user.id}
+          />
+        )}
+        {isPrivacyOpen && (
+          <PrivacyPolicyModal 
+            isOpen={isPrivacyOpen} 
+            onClose={() => setIsPrivacyOpen(false)} 
+          />
+        )}
+        {isTermsOpen && (
+          <TermsOfServiceModal 
+            isOpen={isTermsOpen} 
+            onClose={() => setIsTermsOpen(false)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

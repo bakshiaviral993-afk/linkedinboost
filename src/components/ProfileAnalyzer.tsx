@@ -3,7 +3,16 @@ import { Sparkles, TrendingUp, Zap, FileText, ArrowRight, CheckCircle2, AlertCir
 import { motion, AnimatePresence } from "motion/react";
 import { analyzeProfile, type ProfileAnalysis } from "../services/gemini";
 
-type User = { id: string; name: string; email: string; picture?: string; headline?: string; about?: string };
+type User = { 
+  id: string; 
+  name: string; 
+  email: string; 
+  picture?: string; 
+  headline?: string; 
+  about?: string;
+  followers_count?: number;
+  connections_count?: number;
+};
 
 interface ProfileAnalyzerProps {
   user: User;
@@ -18,11 +27,15 @@ export default function ProfileAnalyzer({ user, onUpdateUser }: ProfileAnalyzerP
 
   const [editHeadline, setEditHeadline] = useState(user.headline || "");
   const [editAbout, setEditAbout] = useState(user.about || "");
+  const [editFollowers, setEditFollowers] = useState<number>(user.followers_count ?? 1280);
+  const [editConnections, setEditConnections] = useState<number>(user.connections_count ?? 500);
 
   useEffect(() => {
     if (user.headline) setEditHeadline(user.headline);
     if (user.about) setEditAbout(user.about);
-  }, [user.headline, user.about]);
+    if (user.followers_count !== undefined) setEditFollowers(user.followers_count);
+    if (user.connections_count !== undefined) setEditConnections(user.connections_count);
+  }, [user.headline, user.about, user.followers_count, user.connections_count]);
 
   const runAnalysisAutomatically = async () => {
     setIsAnalyzing(true);
@@ -36,11 +49,11 @@ export default function ProfileAnalyzer({ user, onUpdateUser }: ProfileAnalyzerP
         const autoData = {
           name: user.name,
           headline: user.headline || editHeadline || "Senior Executive & Thought Leader",
-          about: user.about || editAbout || "Senior BFSI technology leader focused on digital transformation.",
+          about: user.about || editAbout || "Experienced professional focused on business growth, innovation, and strategic transformation.",
           industry: "Professional Network / Targeted Sector",
-          experience: user.about || editAbout || "Strategic executive roles guiding business operations.",
+          experience: user.about || editAbout || "Strategic roles guiding modern business and technology operations.",
           skills: user.headline ? `${user.headline}, Leadership` : "Leadership, Strategy, Growth",
-          connections: "500+"
+          connections: `${editConnections}+`
         };
         const data = await analyzeProfile(autoData, user.id);
         setAnalysis(data);
@@ -73,11 +86,11 @@ export default function ProfileAnalyzer({ user, onUpdateUser }: ProfileAnalyzerP
       const autoData = {
         name: user.name,
         headline: editHeadline || user.headline || "Senior Executive & Thought Leader",
-        about: editAbout || user.about || "Senior BFSI technology leader focused on digital transformation.",
+        about: editAbout || user.about || "Experienced professional focused on business growth, innovation, and strategic transformation.",
         industry: "Professional Network / Targeted Sector",
-        experience: editAbout || user.about || "Strategic executive roles guiding business operations.",
+        experience: editAbout || user.about || "Strategic roles guiding modern business and technology operations.",
         skills: editHeadline ? `${editHeadline}, Leadership` : "Leadership, Strategy, Growth",
-        connections: "500+"
+        connections: `${editConnections}+`
       };
       const data = await analyzeProfile(autoData, user.id);
       setAnalysis(data);
@@ -135,8 +148,7 @@ export default function ProfileAnalyzer({ user, onUpdateUser }: ProfileAnalyzerP
             {user.headline ? "✨ Tailored to your LinkedIn data" : "💡 Fill this once to save and auto-generate tailored roadmaps"}
           </span>
         </div>
-        
-        <form onSubmit={async (e) => {
+            <form onSubmit={async (e) => {
           e.preventDefault();
           setIsAnalyzing(true);
           setError(null);
@@ -144,11 +156,21 @@ export default function ProfileAnalyzer({ user, onUpdateUser }: ProfileAnalyzerP
             const profileRes = await fetch(`/api/user/${user.id}/profile`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ headline: editHeadline, about: editAbout })
+              body: JSON.stringify({ 
+                headline: editHeadline, 
+                about: editAbout,
+                followers_count: editFollowers,
+                connections_count: editConnections
+              })
             });
             if (!profileRes.ok) throw new Error("Failed to save profile details.");
             
-            onUpdateUser?.({ headline: editHeadline, about: editAbout });
+            onUpdateUser?.({ 
+              headline: editHeadline, 
+              about: editAbout,
+              followers_count: editFollowers,
+              connections_count: editConnections
+            });
 
             const autoData = {
               name: user.name,
@@ -157,7 +179,7 @@ export default function ProfileAnalyzer({ user, onUpdateUser }: ProfileAnalyzerP
               industry: "Professional Network / Targeted Sector",
               experience: editAbout,
               skills: `${editHeadline}, Professional Growth`,
-              connections: "500+"
+              connections: `${editConnections}+`
             };
             const data = await analyzeProfile(autoData, user.id);
             setAnalysis(data);
@@ -177,37 +199,64 @@ export default function ProfileAnalyzer({ user, onUpdateUser }: ProfileAnalyzerP
           } finally {
             setIsAnalyzing(false);
           }
-        }} className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
-          <div className="md:col-span-4 space-y-2">
-            <label className="text-xs font-bold text-muted uppercase tracking-widest">My Headline</label>
-            <input 
-              type="text"
-              placeholder="e.g. AI Consultant & Tech Founder"
-              value={editHeadline}
-              onChange={(e) => setEditHeadline(e.target.value)}
-              className="input w-full"
-              required
-            />
+        }} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div className="md:col-span-4 space-y-2">
+              <label className="text-xs font-bold text-muted uppercase tracking-widest">My Headline</label>
+              <input 
+                type="text"
+                placeholder="e.g. AI Consultant & Tech Founder"
+                value={editHeadline}
+                onChange={(e) => setEditHeadline(e.target.value)}
+                className="input w-full rotate-0"
+                required
+              />
+            </div>
+            <div className="md:col-span-4 space-y-2">
+              <label className="text-xs font-bold text-muted uppercase tracking-widest">My Profile Summary (About)</label>
+              <textarea 
+                rows={1}
+                placeholder="Brief summary of your professional expertise, goals..."
+                value={editAbout}
+                onChange={(e) => setEditAbout(e.target.value)}
+                className="input w-full resize-none py-2 px-3 h-[42px] content-center"
+                required
+              />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <label className="text-xs font-bold text-muted uppercase tracking-widest">Followers Count</label>
+              <input 
+                type="number"
+                min="0"
+                value={editFollowers}
+                onChange={(e) => setEditFollowers(parseInt(e.target.value, 10) || 0)}
+                className="input w-full"
+                required
+              />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <label className="text-xs font-bold text-muted uppercase tracking-widest">Connections Count</label>
+              <input 
+                type="number"
+                min="0"
+                value={editConnections}
+                onChange={(e) => setEditConnections(parseInt(e.target.value, 10) || 0)}
+                className="input w-full"
+                required
+              />
+            </div>
           </div>
-          <div className="md:col-span-6 space-y-2">
-            <label className="text-xs font-bold text-muted uppercase tracking-widest">My Profile Summary (About)</label>
-            <textarea 
-              rows={1}
-              placeholder="Brief summary of your professional expertise, goals..."
-              value={editAbout}
-              onChange={(e) => setEditAbout(e.target.value)}
-              className="input w-full resize-none py-2 px-3 h-[42px] content-center"
-              required
-            />
-          </div>
-          <div className="md:col-span-2">
+          <div className="flex justify-end pt-2">
             <button 
               type="submit" 
               disabled={isAnalyzing}
-              className="btn-primary w-full h-[42px]"
+              className="btn-primary px-8 h-[42px] min-w-[200px]"
             >
               {isAnalyzing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Analyzing...</span>
+                </div>
               ) : (
                 "Save & Audit"
               )}

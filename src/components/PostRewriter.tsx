@@ -19,7 +19,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { generatePost, scorePost, type PostGeneration, type PostScore } from "../services/gemini";
 
-type User = { id: string; name: string; email: string; picture?: string };
+type User = { id: string; name: string; email: string; picture?: string; headline?: string; about?: string };
 
 interface PostRewriterProps {
   user: User;
@@ -237,10 +237,10 @@ export default function PostRewriter({ user }: PostRewriterProps) {
       {/* Branding Footer */}
       <footer className="pt-12 border-t border-border flex flex-col items-center text-center">
         <div className="text-sm text-muted mb-2">
-          © 2026 Narratiq · Built by <span className="text-text font-bold">Aviral Bakshi</span> · <a href="https://aviral.in" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">aviral.in</a>
+          © 2026 Narratiq · Built by <span className="text-text font-bold">Aviral Bakshi</span>
         </div>
         <div className="text-xs text-muted italic">
-          Empowering BFSI professionals with AI-driven growth.
+          Empowering {user.headline ? `${user.headline.split(' at ')[0].split(' in ')[0].split('|')[0].trim()} specialists` : "ambitious professionals"} with AI-driven growth.
         </div>
       </footer>
     </div>

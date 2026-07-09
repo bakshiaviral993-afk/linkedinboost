@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Linkedin, Sparkles, TrendingUp, FileText, Zap, ShieldCheck, ArrowRight, ChevronDown, Check, MessageSquare } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import SupportCenterModal from "./SupportCenterModal";
+import PrivacyPolicyModal from "./PrivacyPolicyModal";
+import TermsOfServiceModal from "./TermsOfServiceModal";
 
 interface LandingProps {
   onAuthSuccess: (userId: string) => void;
@@ -10,6 +13,17 @@ export default function Landing({ onAuthSuccess }: LandingProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+
+  const [showBypassForm, setShowBypassForm] = useState(false);
+  const [bypassName, setBypassName] = useState("");
+  const [bypassEmail, setBypassEmail] = useState("");
+  const [bypassHeadline, setBypassHeadline] = useState("");
+  const [bypassAbout, setBypassAbout] = useState("");
+  const [bypassSubmitting, setBypassSubmitting] = useState(false);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -55,6 +69,38 @@ export default function Landing({ onAuthSuccess }: LandingProps) {
     } catch (err: any) {
       setError(err.message);
       setIsConnecting(false);
+    }
+  };
+
+  const handleBypassSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bypassName || !bypassEmail) {
+      setError("Please fill in your name and email.");
+      return;
+    }
+    setBypassSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/bypass", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: bypassName,
+          email: bypassEmail,
+          headline: bypassHeadline,
+          about: bypassAbout,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to complete Quick Sign-In");
+      }
+      localStorage.setItem("lb_user_id", data.userId);
+      onAuthSuccess(data.userId);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBypassSubmitting(false);
     }
   };
 
@@ -164,22 +210,113 @@ export default function Landing({ onAuthSuccess }: LandingProps) {
             Narratiq is the ultimate LinkedIn branding suite. Analyze profiles, optimize summaries, generate viral frameworks with high verisimilitude scores, and structure exact 30-day content strategies.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3.5 justify-center max-w-md mx-auto pt-4">
-            <button 
-              onClick={handleConnect}
-              disabled={isConnecting}
-              className="btn bg-accent hover:bg-accent/80 text-white py-4 px-8 text-base font-bold flex items-center justify-center gap-2 shadow-lg shadow-accent/25 transition-all duration-300 transform hover:scale-[1.01]"
+          {!showBypassForm ? (
+            <div className="space-y-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-3.5 justify-center max-w-md mx-auto">
+                <button 
+                  onClick={handleConnect}
+                  disabled={isConnecting}
+                  className="btn bg-accent hover:bg-accent/80 text-white py-4 px-8 text-base font-bold flex items-center justify-center gap-2 shadow-lg shadow-accent/25 transition-all duration-300 transform hover:scale-[1.01]"
+                >
+                  {isConnecting ? (
+                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Linkedin className="w-4 h-4 fill-current" />
+                      Connect LinkedIn Profile
+                    </>
+                  )}
+                </button>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowBypassForm(true)}
+                className="text-muted hover:text-accent text-xs font-bold transition-colors underline underline-offset-4"
+              >
+                Or sign in instantly with a Demo Profile (Skip OAuth bottlenecks)
+              </button>
+            </div>
+          ) : (
+            <motion.form 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              onSubmit={handleBypassSubmit}
+              className="card bg-surface/85 max-w-md mx-auto p-6 text-left border border-border/80 shadow-2xl relative block"
             >
-              {isConnecting ? (
-                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Linkedin className="w-4 h-4 fill-current" />
-                  Connect LinkedIn Profile
-                </>
-              )}
-            </button>
-          </div>
+              <h3 className="text-xl font-display font-extrabold text-text mb-2 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-accent" />
+                Quick Demo Profile Login
+              </h3>
+              <p className="text-xs text-muted mb-5 leading-relaxed">
+                Bypass LinkedIn enterprise page restrictions. Enter any custom details to create an instant mock sandbox workspace.
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-1">Full Name *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Pravin Kumar" 
+                    value={bypassName}
+                    onChange={(e) => setBypassName(e.target.value)}
+                    className="w-full bg-surface2 border border-border rounded-xl px-3.5 py-2.5 text-sm text-text focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-1">Email Address *</label>
+                  <input 
+                    type="email" 
+                    required
+                    placeholder="e.g. pravin@example.com" 
+                    value={bypassEmail}
+                    onChange={(e) => setBypassEmail(e.target.value)}
+                    className="w-full bg-surface2 border border-border rounded-xl px-3.5 py-2.5 text-sm text-text focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-1">Professional Headline</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Senior Software Engineer / Lead Product Architect" 
+                    value={bypassHeadline}
+                    onChange={(e) => setBypassHeadline(e.target.value)}
+                    className="w-full bg-surface2 border border-border rounded-xl px-3.5 py-2.5 text-sm text-text focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-1">About Summary</label>
+                  <textarea 
+                    rows={2}
+                    placeholder="Brief highlights about your core professional expertise..." 
+                    value={bypassAbout}
+                    onChange={(e) => setBypassAbout(e.target.value)}
+                    className="w-full bg-surface2 border border-border rounded-xl px-3.5 py-2.5 text-sm text-text focus:outline-none focus:border-accent resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mt-6">
+                <button 
+                  type="submit" 
+                  disabled={bypassSubmitting}
+                  className="btn bg-accent hover:bg-accent/85 text-white flex-grow py-3 text-xs font-bold"
+                >
+                  {bypassSubmitting ? "Launching..." : "Launch Instantly 🚀"}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setShowBypassForm(false)}
+                  className="btn bg-surface3 hover:bg-surface2 text-muted px-4 py-3 text-xs font-bold border border-border"
+                >
+                  Back
+                </button>
+              </div>
+            </motion.form>
+          )}
 
           {error && (
             <div className="p-3 bg-danger/10 border border-danger/20 rounded-xl text-danger text-xs max-w-md mx-auto flex items-center justify-center gap-2">
@@ -379,14 +516,54 @@ export default function Landing({ onAuthSuccess }: LandingProps) {
       {/* FOOTER */}
       <footer className="relative z-10 w-full max-w-7xl mx-auto px-6 py-10 border-t border-border/40 flex flex-col sm:flex-row justify-between items-center gap-4 text-muted text-xs">
         <div>
-          © 2026 Narratiq · Engineered by <span className="text-text font-bold">Aviral Bakshi</span> · <a href="https://aviral.in" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">aviral.in</a>
+          © 2026 Narratiq
         </div>
         <div className="flex gap-6">
-          <a href="#" className="hover:text-accent transition-colors">Support Center</a>
-          <a href="#" className="hover:text-accent transition-colors">Privacy Policy</a>
-          <a href="#" className="hover:text-accent transition-colors font-bold">Terms of Use</a>
+          <button 
+            type="button"
+            onClick={() => setIsSupportOpen(true)} 
+            className="hover:text-accent transition-colors bg-transparent border-0 cursor-pointer p-0"
+          >
+            Support Center
+          </button>
+          <button 
+            type="button"
+            onClick={() => setIsPrivacyOpen(true)} 
+            className="hover:text-accent transition-colors bg-transparent border-0 cursor-pointer p-0"
+          >
+            Privacy Policy
+          </button>
+          <button 
+            type="button"
+            onClick={() => setIsTermsOpen(true)} 
+            className="hover:text-accent transition-colors bg-transparent border-0 cursor-pointer p-0 font-bold"
+          >
+            Terms of Use
+          </button>
         </div>
       </footer>
+
+      {/* MODALS */}
+      <AnimatePresence>
+        {isSupportOpen && (
+          <SupportCenterModal 
+            isOpen={isSupportOpen} 
+            onClose={() => setIsSupportOpen(false)} 
+          />
+        )}
+        {isPrivacyOpen && (
+          <PrivacyPolicyModal 
+            isOpen={isPrivacyOpen} 
+            onClose={() => setIsPrivacyOpen(false)} 
+          />
+        )}
+        {isTermsOpen && (
+          <TermsOfServiceModal 
+            isOpen={isTermsOpen} 
+            onClose={() => setIsTermsOpen(false)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

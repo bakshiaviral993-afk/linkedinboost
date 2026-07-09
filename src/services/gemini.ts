@@ -22,6 +22,40 @@ export interface ProfileAnalysis {
     actionItems: string[];
     contentIdeas: string[];
   }[];
+  profileSnapshot?: {
+    name: string;
+    headline: string;
+    industry: string;
+    profileCompletion: number;
+    accountAge: string;
+  };
+  brandScore?: {
+    score: number;
+    grade: string;
+    strengths: string[];
+    weaknesses: string[];
+  };
+  aiAuditSummary?: {
+    topIssues: string[];
+    topOpportunities: string[];
+    recommendations: string[];
+  };
+  keywordSeo?: {
+    detectedKeywords: string[];
+    missingKeywords: string[];
+    keywordCoverage: number;
+  };
+  growthRoadmap30Days?: {
+    week1: { theme: string; focus: string; actionItems: string[]; contentIdeas: string[] };
+    week2: { theme: string; focus: string; actionItems: string[]; contentIdeas: string[] };
+    week3: { theme: string; focus: string; actionItems: string[]; contentIdeas: string[] };
+    week4: { theme: string; focus: string; actionItems: string[]; contentIdeas: string[] };
+  };
+  contentStrategy?: {
+    recommendedTopics: string[];
+    postingFrequency: string;
+    contentPillars: string[];
+  };
 }
 
 export interface PostGeneration {

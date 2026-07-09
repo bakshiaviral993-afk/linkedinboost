@@ -2,7 +2,16 @@ import React, { useState, useEffect } from "react";
 import Landing from "./components/Landing";
 import Dashboard from "./components/Dashboard";
 
-type User = { id: string; name: string; email: string; picture?: string; headline?: string; about?: string };
+type User = { 
+  id: string; 
+  name: string; 
+  email: string; 
+  picture?: string; 
+  headline?: string; 
+  about?: string;
+  followers_count?: number;
+  connections_count?: number;
+};
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);

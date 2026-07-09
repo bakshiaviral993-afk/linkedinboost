@@ -21,6 +21,7 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
   const [scoreResult, setScoreResult] = useState<PostScore | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [publishSuccess, setPublishSuccess] = useState(false);
+  const [isMockBypass, setIsMockBypass] = useState(false);
 
   const [formData, setFormData] = useState({
     topic: "",
@@ -77,6 +78,19 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
       };
       setResult(demoData);
       setEditablePost(demoData.post);
+      
+      // Save demo post to DB
+      fetch("/api/save-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          userId: user.id, 
+          postData: demoData, 
+          topic: formData.topic, 
+          postType: formData.postType 
+        })
+      }).catch(err => console.error("Failed to save demo post:", err));
+
       setIsGenerating(false);
       return;
     }
@@ -135,6 +149,7 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
       });
       const data = await res.json();
       if (data.success) {
+        setIsMockBypass(!!data.mockBypass);
         setPublishSuccess(true);
       } else {
         throw new Error(data.error);
@@ -323,20 +338,36 @@ export default function PostGenerator({ user }: PostGeneratorProps) {
                 initial={{ opacity: 0, height: 0, y: -20 }}
                 animate={{ opacity: 1, height: 'auto', y: 0 }}
                 exit={{ opacity: 0, height: 0, y: -20 }}
-                className="p-4 bg-success/10 border border-success/20 rounded-xl text-success flex items-center justify-between"
+                className={`p-4 border rounded-xl flex items-center justify-between ${
+                  isMockBypass 
+                    ? "bg-amber-500/10 border-amber-500/20 text-amber-500" 
+                    : "bg-success/10 border-success/20 text-success"
+                }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
-                    <CheckCircle2 className="w-5 h-5" />
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    isMockBypass ? "bg-amber-500/20" : "bg-success/20"
+                  }`}>
+                    {isMockBypass ? (
+                      <Zap className="w-5 h-5 animate-pulse" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5" />
+                    )}
                   </div>
                   <div>
-                    <p className="font-bold text-sm">Successfully Published!</p>
-                    <p className="text-xs opacity-80">Your post is now live on LinkedIn.</p>
+                    <p className="font-bold text-sm">
+                      {isMockBypass ? "Saved to Local Sandbox Workspace" : "Successfully Published!"}
+                    </p>
+                    <p className="text-xs opacity-80">
+                      {isMockBypass 
+                        ? "LinkedIn API returned 403 (unauthorized/limited client app scopes). Your post is securely synced inside the container's persistent local database."
+                        : "Your post is now live on LinkedIn."}
+                    </p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setPublishSuccess(false)}
-                  className="text-xs font-bold hover:underline"
+                  className="text-xs font-bold hover:underline ml-4 whitespace-nowrap"
                 >
                   Dismiss
                 </button>
